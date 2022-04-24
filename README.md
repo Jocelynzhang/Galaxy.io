@@ -8,3 +8,7 @@ Based on Agar.io in python
 
 Author: Jocelyn, TQ
 
+=======
+A phy of the game Agar.io written in python
+
+
