@@ -1,5 +1,5 @@
 # Galaxy-IO
-Based on Agar.io in python
+An IO game based on realistic physical mechanism, such as gravity and Newtonion dynamics
 
 # Update:
 1. Change background
@@ -8,7 +8,5 @@ Based on Agar.io in python
 
 Author: Jocelyn, TQ
 
-=======
-A phy of the game Agar.io written in python
 
 
