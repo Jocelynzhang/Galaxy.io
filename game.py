@@ -31,9 +31,14 @@ print(2)
 bg = pygame.image.load("images/bg2.png")
 bird = pygame.image.load('images/bird.png')
 electron = pygame.image.load('images/electron1.png')
-atom = pygame.image.load('images/atom1.png')
-object_list = [electron,atom]
-level_threshold = [0,10,99999999]
+atom = pygame.image.load('images/newatom1.png')
+rock = pygame.image.load('images/rock1.png')
+moon = pygame.image.load('images/moon1.png')
+earth = pygame.image.load('images/earth1.png')
+planet = pygame.image.load('images/planet1.png')
+sun = pygame.image.load('images/sun1.png')
+object_list = [electron,atom,rock,moon,earth,planet,sun]
+level_threshold = [0,2,10,20,30,40,60,99999999]
 
 #bird.convert()
 rectlist = [object_list[i].get_rect() for i in range(len(object_list))]
