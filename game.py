@@ -30,16 +30,23 @@ print(2)
 
 bg = pygame.image.load("images/bg2.png")
 bird = pygame.image.load('images/bird.png')
-electron = pygame.image.load('images/electron.png')
+electron = pygame.image.load('images/electron1.png')
+atom = pygame.image.load('images/atom1.png')
+object_list = [electron,atom]
+level_threshold = [0,10,99999999]
 
 #bird.convert()
+rectlist = [object_list[i].get_rect() for i in range(len(object_list))]
 
-rect = electron.get_rect()
 #rect.center = w//2, h//2
 
 
 #INSIDE OF THE GAME LOOP
-
+def getlevel(score):
+	level = 0
+	while score>=level_threshold[level+1]:
+		level+=1
+	return level
 # FUNCTIONS
 def convert_time(t):
 	"""
@@ -82,16 +89,16 @@ def redraw_window(players, balls, game_time, score):
 		p = players[player]
 		#pygame.draw.circle(WIN, p["color"], (p["x"], p["y"]), PLAYER_RADIUS + round(p["score"]))
 		#pygame.draw.rect(bird)
-
-
-		new_radius = 3*(PLAYER_RADIUS + round(p["score"]))
-		electron2 = pygame.transform.scale(electron, (new_radius, new_radius)) 
-
-		rect.center = p["x"] - electron2.get_width()/2, p["y"] - electron2.get_height()/2
+		player_level=getlevel(round(p["score"]))
+		objectimage = object_list[player_level]
+		new_radius = 2*(PLAYER_RADIUS + round(p["score"]))
+		newimage = pygame.transform.scale(objectimage, (new_radius, new_radius)) 
+		rect=rectlist[player_level]
+		rect.center = p["x"] - newimage.get_width()/2, p["y"] - newimage.get_height()/2
 		rect.width = 0
 		rect.height = 0
 
-		WIN.blit(electron2, rect)
+		WIN.blit(newimage, rect)
 		trans_color = pygame.Color(255, 255, 255)
 		pygame.draw.rect(WIN, trans_color, rect, PLAYER_RADIUS + round(p["score"]))
 
