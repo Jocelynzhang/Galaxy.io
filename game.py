@@ -21,7 +21,7 @@ TIME_FONT = pygame.font.SysFont("comicsans", 30)
 SCORE_FONT = pygame.font.SysFont("comicsans", 26)
 
 COLORS = [(255,0,0), (255, 128, 0), (255,255,0), (128,255,0),(0,255,0),(0,255,128),(0,255,255),(0, 128, 255), (0,0,255), (0,0,255), (128,0,255),(255,0,255), (255,0,128),(128,128,128), (0,0,0)]
-
+FOOD_COLORS = [(112, 183, 219),(158, 137, 214),(178, 199, 111)]
 # Dynamic Variables
 players = {}
 balls = []

@@ -48,6 +48,7 @@ balls = []
 connections = 0
 _id = 0
 colors = [(255,0,0), (255, 128, 0), (255,255,0), (128,255,0),(0,255,0),(0,255,128),(0,255,255),(0, 128, 255), (0,0,255), (0,0,255), (128,0,255),(255,0,255), (255,0,128),(128,128,128), (0,0,0)]
+FOOD_COLORS = [(112, 183, 219),(158, 137, 214),(178, 199, 111)]
 start = False
 stat_time = 0
 game_time = "Starting Soon"
@@ -137,7 +138,7 @@ def create_balls(balls, n):
 			if stop:
 				break
 
-		balls.append((x,y, random.choice(colors)))
+		balls.append((x,y, random.choice(FOOD_COLORS)))
 
 
 def get_start_location(players):
@@ -205,6 +206,7 @@ def threaded_client(conn, _id):
 			if game_time >= ROUND_TIME:
 				start = False
 			else:
+				#print(game_time,nxt)
 				if game_time // MASS_LOSS_TIME == nxt:
 					nxt += 1
 					release_mass(players)
