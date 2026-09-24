@@ -30,6 +30,10 @@ W, H = 1200, 600
 HOST_NAME = socket.gethostname()
 SERVER_IP = socket.gethostbyname(HOST_NAME)
 
+#SERVER_IP = "24.3.250.213"
+
+
+
 # try to connect to server
 try:
     S.bind((SERVER_IP, PORT))
@@ -44,7 +48,7 @@ print(f"[SERVER] Server Started with local ip {SERVER_IP}")
 
 # dynamic variables
 players = {}
-balls = []’
+balls = []
 connections = 0
 _id = 0
 
