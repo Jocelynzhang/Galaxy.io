@@ -152,7 +152,11 @@ export class Renderer {
 
   addEntry(p) {
     const node = new Container();
-    const shield = new Graphics().circle(0, 0, 1).stroke({ width: 0.05, color: 0x9fe8ff, alpha: 0.9 });
+    // drawn at radius 100 and scaled down so the ring stays smooth (see BlackHole core)
+    const ring = new Graphics().circle(0, 0, 100).stroke({ width: 5, color: 0x9fe8ff, alpha: 0.9 });
+    ring.scale.set(0.01);
+    const shield = new Container();
+    shield.addChild(ring);
     const label = new Text({
       text: '',
       style: { fontFamily: 'Trebuchet MS', fontSize: NAME_FONT, fontWeight: 'bold', fill: 0xffffff,

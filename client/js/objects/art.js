@@ -418,34 +418,82 @@ export const sprites = {
     ctx.fillRect(0, 0, w, h);
   }, { w: 64, h: 256 }),
 
+  // Spiral galaxy, in layers so they can turn at slightly different speeds:
+  // 0 = soft arm glow + bulge + dust lanes, 1 = thousands of stars, 2 = young blue clusters and
+  // pink star-forming nebulae. Arms follow a logarithmic spiral (pitch ~15 degrees, like the Milky Way).
   spiral: (layer) => tex(`spiral${layer}`, (ctx, w) => {
     const r = rng(70 + layer);
     const c = w / 2;
+    const gauss = () => Math.sqrt(-2 * Math.log(r() + 1e-9)) * Math.cos(2 * Math.PI * r());
+    const pitch = Math.tan((15 * Math.PI) / 180);
+    const r0 = c * 0.1;
+    // main arms at 0 and pi, fainter secondary arms in between
+    const arms = [[0, 1], [Math.PI, 1], [Math.PI / 2, 0.45], [Math.PI * 1.5, 0.45]];
+    const armPoint = (arm, t, spreadK) => {
+      const rad = c * (0.1 + 0.86 * t);
+      const theta = arm + Math.log(rad / r0) / pitch;
+      const spread = gauss() * (c * 0.025 + rad * spreadK);
+      const along = gauss() * c * 0.01;
+      return [c + Math.cos(theta) * rad - Math.sin(theta) * spread + Math.cos(theta) * along,
+              c + Math.sin(theta) * rad + Math.cos(theta) * spread + Math.sin(theta) * along, rad, theta];
+    };
     if (layer === 0) {
-      blob(ctx, c, c, w * 0.5, 'rgba(120,110,200,0.35)');
+      blob(ctx, c, c, c, 'rgba(90,100,190,0.38)');                   // faint disk
+      for (const [arm, strength] of arms) {
+        for (let i = 0; i < 420 * strength; i++) {
+          const t = Math.pow(r(), 0.9);
+          const [x, y] = armPoint(arm, t, 0.085);
+          const size = c * (0.06 + 0.1 * t);
+          blob(ctx, x, y, size, r() < 0.8 ? 'rgba(150,175,255,0.9)' : 'rgba(255,190,230,0.9)', 0.2 * strength * (1.15 - t * 0.55));
+        }
+      }
+      // dark dust lanes hugging the inner edge of the main arms
+      ctx.globalCompositeOperation = 'destination-out';
+      for (const [arm, strength] of arms.slice(0, 2)) {
+        for (let i = 0; i < 380; i++) {
+          const t = 0.08 + r() * 0.75;
+          const rad = c * (0.1 + 0.86 * t);
+          const theta = arm + Math.log(rad / r0) / pitch - 0.16;
+          blob(ctx, c + Math.cos(theta) * rad, c + Math.sin(theta) * rad, c * 0.018 + rad * 0.02, 'rgba(0,0,0,1)', 0.22 * strength);
+        }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      // golden central bulge
+      blob(ctx, c, c, c * 0.42, 'rgba(255,214,150,0.55)');
+      blob(ctx, c, c, c * 0.22, 'rgba(255,236,190,1)');
+      blob(ctx, c, c, c * 0.09, 'rgba(255,255,245,1)');
+    } else if (layer === 1) {
+      const colors = ['#ffffff', '#dfe8ff', '#c3d4ff', '#fff1d6'];
+      for (const [arm, strength] of arms) {
+        for (let i = 0; i < 3800 * strength; i++) {
+          const t = Math.pow(r(), 0.85);
+          const [x, y] = armPoint(arm, t, 0.095);
+          ctx.globalAlpha = 0.35 + r() * 0.65;
+          ctx.fillStyle = colors[Math.floor(r() * colors.length)];
+          ctx.fillRect(x, y, 0.8 + r() * 1.6, 0.8 + r() * 1.6);
+        }
+      }
+      for (let i = 0; i < 2200; i++) {                                  // old stars in the disk and bulge
+        const rad = Math.abs(gauss()) * c * 0.35;
+        const a = r() * Math.PI * 2;
+        ctx.globalAlpha = 0.3 + r() * 0.5;
+        ctx.fillStyle = r() < 0.6 ? '#ffe9c4' : '#ffffff';
+        ctx.fillRect(c + Math.cos(a) * rad, c + Math.sin(a) * rad, 1 + r(), 1 + r());
+      }
+      ctx.globalAlpha = 1;
+    } else {
+      for (const [arm, strength] of arms) {
+        for (let i = 0; i < 70 * strength; i++) {
+          const t = 0.15 + r() * 0.8;
+          const [x, y] = armPoint(arm, t, 0.04);
+          if (r() < 0.45) {   // pink star-forming nebula (glowing hydrogen)
+            blob(ctx, x, y, c * (0.012 + r() * 0.02), 'rgba(255,120,190,1)', 0.85);
+          } else {            // cluster of hot young blue stars
+            blob(ctx, x, y, c * (0.01 + r() * 0.015), 'rgba(170,205,255,1)', 0.9);
+            blob(ctx, x, y, c * 0.004, 'rgba(255,255,255,1)', 1);
+          }
+        }
+      }
     }
-    const arms = 2;
-    const n = layer === 0 ? 2600 : 900;
-    for (let i = 0; i < n; i++) {
-      const arm = i % arms;
-      const t = Math.pow(r(), 0.8);                       // distance along the arm
-      const theta = t * 3.4 * Math.PI + arm * Math.PI;    // log-spiral-ish winding
-      const rad = c * (0.08 + 0.88 * t);
-      const spread = (r() - 0.5) * c * (0.06 + 0.22 * t);
-      const x = c + Math.cos(theta) * rad + Math.cos(theta + Math.PI / 2) * spread;
-      const y = c + Math.sin(theta) * rad + Math.sin(theta + Math.PI / 2) * spread;
-      const colors = layer === 0 ? ['#cfe0ff', '#ffffff', '#9fb8ff', '#ffd9f0'] : ['#ffffff', '#ffb3e6', '#b3d1ff'];
-      const size = layer === 0 ? 0.6 + r() * 1.3 : 1 + r() * 2.2;
-      ctx.globalAlpha = 0.35 + r() * 0.65;
-      ctx.fillStyle = colors[Math.floor(r() * colors.length)];
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    if (layer === 0) {   // glowing bulge
-      blob(ctx, c, c, w * 0.17, 'rgba(255,236,190,1)');
-      blob(ctx, c, c, w * 0.08, 'rgba(255,255,240,1)');
-    }
-  }, { w: 512 }),
+  }, { w: 1024 }),
 };

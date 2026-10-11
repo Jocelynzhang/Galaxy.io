@@ -13,15 +13,20 @@ document.body.appendChild(app.canvas);
 
 const LENS_K = [0, 0, 0.16, 0.22, 0.3, 0.34, 0.42, 0.4, 0.75, 1.2, 1.3, 0.95];
 // level index + variant seed for each tile
-const tiles = [[0, 0], [1, 0], [1, 1], [2, 0], [2, 1], [3, 0], [3, 1], [3, 2], [4, 0], [4, 1], [4, 2],
-               [5, 0], [6, 0], [6, 1], [7, 0], [8, 0], [9, 0], [10, 0], [11, 0]];
+let tiles = [[0, 0], [1, 0], [1, 1], [2, 0], [2, 1], [3, 0], [3, 1], [3, 2], [4, 0], [4, 1], [4, 2],
+             [5, 0], [6, 0], [6, 1], [7, 0], [8, 0], [9, 0], [10, 0], [11, 0]];
+// ?only=9,11 shows just those levels, big (close-ups)
+if (params.get('only')) {
+  const keep = params.get('only').split(',').map(Number);
+  tiles = tiles.filter(([lvl, seed]) => keep.includes(lvl) && seed === 0);
+}
 const bg = new LensBackground();
 const world = new Container();
 const below = new Container(), above = new Container();
 app.stage.addChild(bg.view, below, world, above);
 const fx = new Effects(below, above);
 
-const cols = 7;
+const cols = Math.min(7, tiles.length);
 const items = tiles.map(([lvl, seed], i) => {
   const body = createBody(LEVELS[lvl].key, seed);
   const label = new Text({ text: LEVELS[lvl].name, style: { fontFamily: 'Trebuchet MS', fontSize: 14, fill: 0xffffff } });
