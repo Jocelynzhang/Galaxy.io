@@ -106,7 +106,7 @@ def think(world: World, me: Player, brain: Brain, now: float) -> None:
             if danger > 0:
                 flee_x += (me.x - o.x) / max(d, 1) * danger
                 flee_y += (me.y - o.y) / max(d, 1) * danger
-        elif can_eat(me.mass, o.mass) and d < prey_d:
+        elif can_eat(me.mass, o.mass) and d < prey_d and not world.shielded(o):
             prey, prey_d = o, d
 
     boost = False

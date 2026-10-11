@@ -3,6 +3,8 @@
 # --- timing ---
 TICK_HZ = 30
 SNAPSHOT_EVERY = 2           # send a snapshot every N ticks (30 Hz / 2 = 15 Hz)
+LEADERBOARD_EVERY = 30       # include the leaderboard every N ticks (must be a multiple of SNAPSHOT_EVERY)
+LEADERBOARD_SIZE = 10
 
 # --- world ---
 WORLD_W = 4500
@@ -18,6 +20,8 @@ FOOD_COLORS = 6              # number of palette entries the client knows about
 
 # --- players ---
 START_MASS = 10.0
+SPAWN_SAFE_DIST = 700        # try to spawn at least this far from anything that could eat you
+SPAWN_SHIELD_S = 3.0         # newly spawned objects can't be eaten for this long
 RADIUS_K = 4.0               # radius = RADIUS_K * sqrt(mass)
 
 # speed = SPEED_V0 * mass^-SPEED_EXP, never below SPEED_MIN (world units / second)

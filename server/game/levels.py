@@ -1,28 +1,29 @@
-"""The astrophysical ladder. Game-mass thresholds are drafts; they get tuned in M2."""
+"""The astrophysical ladder, loaded from client/data/ladder.json (shared with the browser)."""
+import json
+import math
 from dataclasses import dataclass
+from pathlib import Path
+
+from . import config as C
+
+LADDER_PATH = Path(__file__).resolve().parents[2] / "client" / "data" / "ladder.json"
 
 
 @dataclass(frozen=True)
 class Level:
     key: str
     name: str
-    min_mass: float   # game mass at which this level starts
+    min_mass: float                  # game mass at which this level starts
+    real_kg: tuple[float, float]     # real-mass range shown in the HUD
 
 
-LEVELS = [
-    Level("dust", "Dust", 0),
-    Level("asteroid", "Asteroid", 25),
-    Level("dwarf_planet", "Dwarf planet", 60),
-    Level("terrestrial", "Terrestrial planet", 130),
-    Level("gas_giant", "Gas giant", 260),
-    Level("brown_dwarf", "Brown dwarf", 500),
-    Level("main_sequence", "Main-sequence star", 900),
-    Level("giant", "Giant star", 1600),
-    Level("neutron_star", "Neutron star", 2600),
-    Level("black_hole", "Black hole", 3800),
-    Level("quasar", "Quasar", 5500),
-    Level("galaxy", "Galaxy", 8000),
-]
+def _load() -> tuple[list[Level], float]:
+    data = json.loads(LADDER_PATH.read_text())
+    levels = [Level(d["key"], d["name"], float(d["min_mass"]), tuple(d["real_kg"])) for d in data["levels"]]
+    return levels, float(data["top_mass"])
+
+
+LEVELS, TOP_MASS = _load()
 
 
 def level_index(mass: float) -> int:
@@ -31,3 +32,21 @@ def level_index(mass: float) -> int:
         if mass >= lvl.min_mass:
             idx = i
     return idx
+
+
+def level_span(i: int) -> tuple[float, float]:
+    """Game-mass range [start, end) of level i. Dust starts at START_MASS (nobody is smaller)
+    and the last level ends at TOP_MASS."""
+    start = C.START_MASS if i == 0 else LEVELS[i].min_mass
+    end = LEVELS[i + 1].min_mass if i + 1 < len(LEVELS) else TOP_MASS
+    return start, end
+
+
+def real_mass_kg(mass: float) -> float:
+    """Map game mass to a real mass in kg, log-linearly within the current level's real range."""
+    i = level_index(mass)
+    lo, hi = level_span(i)
+    t = (math.log(max(mass, lo)) - math.log(lo)) / (math.log(hi) - math.log(lo))
+    k_lo, k_hi = LEVELS[i].real_kg
+    # past the top of the ladder keep extrapolating, so galaxies can keep "growing"
+    return 10 ** (math.log10(k_lo) + max(0.0, t) * (math.log10(k_hi) - math.log10(k_lo)))

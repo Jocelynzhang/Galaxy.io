@@ -6,7 +6,7 @@ from server.game import config as C
 from server.game.levels import LEVELS, level_index
 from server.game.physics import can_eat, speed_for, zoom_for
 from server.game.world import World
-from server.main import clean_name
+from server.game.names import clean_name
 
 DT = 1.0 / C.TICK_HZ
 
@@ -76,6 +76,7 @@ def test_big_player_eats_small_one():
     w = empty_world()
     big, small = w.add_player("big"), w.add_player("small")
     big.mass, small.mass = 100, 20
+    small.shield_until = 0          # spawn protection over
     big.x = big.y = small.x = small.y = 1000
     small.x += 5
     deaths = w._eat_players()
@@ -136,3 +137,25 @@ def test_snapshot_only_includes_players_in_view():
 ])
 def test_clean_name(raw, expected):
     assert clean_name(raw) == expected
+
+
+def test_new_players_are_shielded_then_edible():
+    w = empty_world()
+    big = w.add_player("big", mass=500)
+    kid = w.add_player("kid")
+    kid.x, kid.y = big.x, big.y
+    assert w._eat_players() == [], "spawn shield protects newcomers"
+    w.tick = kid.shield_until
+    assert [d.victim_id for d in w._eat_players()] == [kid.id]
+
+
+def test_newcomers_spawn_away_from_threats():
+    w = empty_world()
+    for _ in range(4):
+        w.add_player("big", mass=800)
+    for _ in range(20):
+        kid = w.add_player("kid")
+        threats = [p for p in w.players.values() if p.mass >= C.EAT_RATIO * kid.mass]
+        gap = min(math.hypot(kid.x - p.x, kid.y - p.y) - p.radius for p in threats)
+        assert gap > C.SPAWN_SAFE_DIST * 0.9
+        w.remove_player(kid.id)

@@ -1,18 +1,26 @@
-// Client-side display info for the ladder; indices match server/game/levels.py.
-export const LEVELS = [
-  { key: 'dust', name: 'Dust', color: 0xc9b79c },
-  { key: 'asteroid', name: 'Asteroid', color: 0x9e8f80 },
-  { key: 'dwarf_planet', name: 'Dwarf planet', color: 0xd9c2a7 },
-  { key: 'terrestrial', name: 'Terrestrial planet', color: 0x4f9de0 },
-  { key: 'gas_giant', name: 'Gas giant', color: 0xe0a96d },
-  { key: 'brown_dwarf', name: 'Brown dwarf', color: 0xb0507a },
-  { key: 'main_sequence', name: 'Main-sequence star', color: 0xffd34d },
-  { key: 'giant', name: 'Giant star', color: 0xff7a45 },
-  { key: 'neutron_star', name: 'Neutron star', color: 0xbfe6ff },
-  { key: 'black_hole', name: 'Black hole', color: 0x5b3f8c },
-  { key: 'quasar', name: 'Quasar', color: 0x9f7bff },
-  { key: 'galaxy', name: 'Galaxy', color: 0xd6b8ff },
-];
+// The ladder is loaded from data/ladder.json, the same file the server reads.
+export const LEVELS = [];
+export let TOP_MASS = Infinity;
+let startMass = 0;
+
+// Everyone spawns at the server's start mass, so dust progress is measured from there.
+export function setStartMass(m) {
+  startMass = m;
+}
+
+export async function loadLadder() {
+  const data = await (await fetch('data/ladder.json')).json();
+  TOP_MASS = data.top_mass;
+  for (const l of data.levels) {
+    LEVELS.push({ ...l, css: l.color, color: parseInt(l.color.slice(1), 16) });
+  }
+}
+
+// Game-mass range [start, end) of level i.
+export function levelSpan(i) {
+  const start = i === 0 ? startMass : LEVELS[i].min_mass;
+  return [start, i + 1 < LEVELS.length ? LEVELS[i + 1].min_mass : TOP_MASS];
+}
 
 export const FOOD_PALETTE = [0x70b7db, 0x9e89d6, 0xb2c76f, 0xf2a7c3, 0xffd98a, 0x8fe3c8];
 

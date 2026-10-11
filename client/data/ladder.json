@@ -1,0 +1,93 @@
+{
+  "_comment": "Single source of truth for the astrophysical ladder, read by server/game/levels.py and client/js/levels.js. min_mass = game mass where the level starts; real_kg = real-mass range shown in the HUD (mapped log-linearly within the level); top_mass = game mass that maps to the top of the last level's real range.",
+  "top_mass": 24000,
+  "levels": [
+    {
+      "key": "dust", "name": "Dust", "min_mass": 0, "real_kg": [1e-15, 1e3], "color": "#c9b79c",
+      "facts": [
+        "Space is full of tiny dust grains, many smaller than a speck of flour. Planets are built from dust like you!",
+        "In space, dust grains stick together into bigger and bigger clumps. Keep eating!"
+      ]
+    },
+    {
+      "key": "asteroid", "name": "Asteroid", "min_mass": 25, "real_kg": [1e3, 1e20], "color": "#9e8f80",
+      "facts": [
+        "Asteroids are rocky leftovers from when the planets formed, about 4.6 billion years ago.",
+        "Most asteroids in our Solar System orbit in the Asteroid Belt, between Mars and Jupiter."
+      ]
+    },
+    {
+      "key": "dwarf_planet", "name": "Dwarf planet", "min_mass": 60, "real_kg": [1e20, 1e23], "color": "#d9c2a7",
+      "facts": [
+        "Pluto was called a planet until 2006. Now it is a dwarf planet, like Ceres and Eris.",
+        "A dwarf planet is big enough to pull itself round, but it hasn't cleared other objects out of its path."
+      ]
+    },
+    {
+      "key": "terrestrial", "name": "Terrestrial planet", "min_mass": 130, "real_kg": [1e23, 1e25], "color": "#4f9de0",
+      "facts": [
+        "Terrestrial planets like Mercury, Venus, Earth and Mars have solid, rocky surfaces.",
+        "Earth is the only planet we know of with oceans of liquid water on its surface."
+      ]
+    },
+    {
+      "key": "gas_giant", "name": "Gas giant", "min_mass": 260, "real_kg": [1e25, 2.5e28], "color": "#e0a96d",
+      "facts": [
+        "Gas giants are made mostly of hydrogen and helium. There is no solid ground to stand on!",
+        "Jupiter is so big that about 1,300 Earths could fit inside it."
+      ]
+    },
+    {
+      "key": "brown_dwarf", "name": "Brown dwarf", "min_mass": 500, "real_kg": [2.5e28, 1.6e29], "color": "#b0507a",
+      "facts": [
+        "Brown dwarfs are 'failed stars': too heavy to be planets, but too light to shine by fusing hydrogen.",
+        "Brown dwarfs glow faintly in infrared light because they are still warm from when they formed."
+      ]
+    },
+    {
+      "key": "main_sequence", "name": "Main-sequence star", "min_mass": 900, "real_kg": [1.6e29, 1.6e31], "color": "#ffd34d",
+      "facts": [
+        "You're a star! Stars shine by fusing hydrogen into helium in their cores. Our Sun is a main-sequence star.",
+        "Small stars glow red and can live for trillions of years. Big stars glow blue and burn out in a few million."
+      ]
+    },
+    {
+      "key": "giant", "name": "Giant star", "min_mass": 1600, "real_kg": [1.6e31, 5e31], "color": "#ff7a45",
+      "facts": [
+        "When a star runs low on hydrogen in its core, it swells into a giant. If Betelgeuse replaced the Sun, it would reach past Mars!",
+        "Giant stars are enormous but not very dense: their outer layers are thinner than the air you breathe."
+      ]
+    },
+    {
+      "key": "neutron_star", "name": "Neutron star", "min_mass": 2600, "real_kg": [2.8e30, 4.6e30], "color": "#bfe6ff",
+      "facts": [
+        "BOOM! Big stars end in a supernova explosion that blasts most of their mass into space. The crushed core left behind is a neutron star.",
+        "A neutron star is only about 20 km across, yet a teaspoon of it would weigh billions of tonnes.",
+        "Some neutron stars spin hundreds of times a second and sweep beams across space like a lighthouse. We call them pulsars."
+      ]
+    },
+    {
+      "key": "black_hole", "name": "Black hole", "min_mass": 3800, "real_kg": [1e31, 2e38], "color": "#5b3f8c",
+      "facts": [
+        "Too heavy! Your core collapsed into a black hole. Its gravity is so strong that not even light can escape.",
+        "Black holes are tiny for their mass: one as heavy as the Sun would be only about 6 km across. The glowing disk around it is much bigger.",
+        "Heavy objects bend light. This is called gravitational lensing. Watch the grid bend around you!"
+      ]
+    },
+    {
+      "key": "quasar", "name": "Quasar", "min_mass": 5500, "real_kg": [2e38, 2e40], "color": "#9f7bff",
+      "facts": [
+        "A quasar is a giant black hole swallowing gas so fast that its hot disk outshines a whole galaxy.",
+        "Quasars are among the brightest things in the universe. We can see them billions of light-years away."
+      ]
+    },
+    {
+      "key": "galaxy", "name": "Galaxy", "min_mass": 8000, "real_kg": [2e40, 3e42], "color": "#d6b8ff",
+      "facts": [
+        "Quasars shine in the centres of young galaxies. Now you're a whole galaxy: billions of stars, gas, dust and dark matter held together by gravity!",
+        "Our Milky Way has a few hundred billion stars and a giant black hole at its centre called Sagittarius A*.",
+        "There are hundreds of billions of galaxies in the universe we can observe."
+      ]
+    }
+  ]
+}

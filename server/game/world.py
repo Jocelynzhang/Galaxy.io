@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from . import config as C
 from .entities import Food, Player, radius_for
-from .levels import level_index
+from .levels import level_index, real_mass_kg
 from .physics import can_eat, overlaps_to_eat, speed_for, zoom_for
 
 
@@ -76,8 +76,9 @@ class World:
 
     # ---------- players ----------
     def add_player(self, name: str, is_bot: bool = False, mass: float = C.START_MASS) -> Player:
-        x, y = self._free_spot(radius_for(mass))
-        p = Player(id=next(self._ids), name=name, x=x, y=y, mass=mass, is_bot=is_bot)
+        x, y = self._free_spot(radius_for(mass), mass)
+        p = Player(id=next(self._ids), name=name, x=x, y=y, mass=mass, is_bot=is_bot,
+                   shield_until=self.tick + round(C.SPAWN_SHIELD_S * C.TICK_HZ))
         self.players[p.id] = p
         self.best_level[p.id] = level_index(mass)
         return p
@@ -94,14 +95,23 @@ class World:
         p.throttle = min(1.0, max(0.0, throttle))
         p.boost = boost
 
-    def _free_spot(self, r: float) -> tuple[float, float]:
-        """Random position not inside any player (gives up after a few tries)."""
-        for _ in range(30):
+    def shielded(self, p: Player) -> bool:
+        return self.tick < p.shield_until
+
+    def _free_spot(self, r: float, mass: float) -> tuple[float, float]:
+        """Random position far from anything that could eat a newcomer of `mass`. Tries a few
+        candidates and keeps the safest one."""
+        best, best_gap = (C.WORLD_W / 2, C.WORLD_H / 2), -math.inf
+        for _ in range(40):
             x = self.rng.uniform(r, C.WORLD_W - r)
             y = self.rng.uniform(r, C.WORLD_H - r)
-            if all(math.hypot(x - p.x, y - p.y) > p.radius + r + 50 for p in self.players.values()):
+            gap = min((math.hypot(x - p.x, y - p.y) - p.radius - r - (C.SPAWN_SAFE_DIST if can_eat(p.mass, mass) else 50)
+                       for p in self.players.values()), default=math.inf)
+            if gap >= 0:
                 return x, y
-        return x, y
+            if gap > best_gap:
+                best, best_gap = (x, y), gap
+        return best
 
     # ---------- food ----------
     def _add_food(self, f: Food) -> None:
@@ -244,7 +254,7 @@ class World:
             if a.id in gone:
                 continue
             for b in order:
-                if b is a or b.id in gone or not can_eat(a.mass, b.mass):
+                if b is a or b.id in gone or not can_eat(a.mass, b.mass) or self.shielded(b):
                     continue
                 if overlaps_to_eat(a.x, a.y, a.radius, b.x, b.y, b.radius):
                     a.mass += b.mass * C.EAT_EFFICIENCY
@@ -255,9 +265,14 @@ class World:
         return deaths
 
     # ---------- snapshots ----------
-    def snapshot_for(self, pid: int, view_w: float, view_h: float, known_food: dict[int, int]) -> dict:
+    def leaderboard(self) -> list[Player]:
+        return sorted(self.players.values(), key=lambda p: p.mass, reverse=True)
+
+    def snapshot_for(self, pid: int, view_w: float, view_h: float, known_food: dict[int, int],
+                     board: list[Player] | None = None) -> dict:
         """State visible to one player. `known_food` (food id -> tick last sent) is updated in place,
-        so only new/moved food is sent and the client is told which ids to forget."""
+        so only new/moved food is sent and the client is told which ids to forget. When `board`
+        (players sorted by mass) is given, the top of it and this player's rank are included."""
         me = self.players[pid]
         zoom = zoom_for(me.mass)
         hw = view_w / 2 / zoom + C.VIEW_MARGIN
@@ -266,7 +281,7 @@ class World:
 
         players = [
             [p.id, round(p.x, 1), round(p.y, 1), round(p.radius, 1), level_index(p.mass), p.name,
-             int(p.is_bot), int(p.boosting)]
+             int(p.is_bot), int(p.boosting), int(self.shielded(p))]
             for p in self.players.values()
             if x0 - p.radius < p.x < x1 + p.radius and y0 - p.radius < p.y < y1 + p.radius
         ]
@@ -282,13 +297,19 @@ class World:
         for fid in removed:
             del known_food[fid]
 
-        return {
+        snap = {
             "t": "s",
             "tk": self.tick,
             "me": {"id": pid, "x": round(me.x, 1), "y": round(me.y, 1), "m": round(me.mass, 1),
-                   "lvl": level_index(me.mass), "b": int(me.boosting)},
+                   "lvl": level_index(me.mass), "b": int(me.boosting),
+                   "rk": round(math.log10(real_mass_kg(me.mass)), 3)},
             "z": round(zoom, 4),
             "p": players,
             "f": added,
             "fr": removed,
         }
+        if board is not None:
+            snap["lb"] = [[p.id, p.name, round(p.mass), level_index(p.mass), int(p.is_bot)]
+                          for p in board[:C.LEADERBOARD_SIZE]]
+            snap["rank"] = next(i for i, p in enumerate(board, 1) if p.id == pid)
+        return snap

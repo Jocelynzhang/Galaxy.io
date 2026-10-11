@@ -10,7 +10,26 @@
   <div id="stage"></div>
 
   <div id="hud" hidden>
-    <div id="hud-mass"></div>
+    <aside id="leaderboard" class="panel">
+      <h3>Leaderboard</h3>
+      <ol id="lb-list"></ol>
+      <div id="lb-me" hidden></div>
+    </aside>
+
+    <aside id="progress" class="panel">
+      <div class="prog-row">
+        <div id="icon-cur" class="lvl-icon"></div>
+        <div class="bar"><div id="prog-fill" class="fill"></div></div>
+        <div id="icon-next" class="lvl-icon"></div>
+      </div>
+      <div class="prog-labels"><span id="lvl-cur"></span><span id="lvl-next"></span></div>
+      <div id="real-mass"></div>
+    </aside>
+
+    <div id="toast" class="toast" hidden>
+      <div class="toast-title"></div>
+      <div class="toast-body"></div>
+    </div>
   </div>
 
   <section id="join" class="overlay">
@@ -28,6 +47,7 @@
     <div class="card">
       <h2>Swallowed!</h2>
       <p id="dead-msg"></p>
+      <p id="dead-fact" class="fact"></p>
       <button id="again" type="button">Play again</button>
     </div>
   </section>
