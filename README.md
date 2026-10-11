@@ -14,7 +14,7 @@ uvicorn server.main:app --reload --reload-dir server --port 8000
 
 Tests: `pytest server/tests`
 
-Hosting it (Mac + Cloudflare Tunnel, universe-io.fun): see `deploy/DEPLOY.md`.
+Hosting it (Mac + Cloudflare Tunnel, universe-io.fun): run `deploy/start_hosting.sh`; details in `deploy/DEPLOY.md`.
 
 The original 2022 pygame LAN version is in `legacy/`.
 See `CLAUDE.md` for the design, decisions and roadmap.

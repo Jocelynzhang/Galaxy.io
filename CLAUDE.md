@@ -168,7 +168,8 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - Headless screenshot (no browser extension needed):
   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --user-data-dir=<tmp> --window-size=1280,720 --virtual-time-budget=6000 --screenshot=out.png "http://127.0.0.1:8000/?name=TQ"`
   (Chrome may not exit after the shot; wrap it in `perl -e 'alarm 45; exec @ARGV'` and kill the profile's process.)
-- Production: `GALAXY_PYTHON=$(which python) scripts/run_prod.sh` (+ `cloudflared tunnel --url http://127.0.0.1:8000` for a temporary public URL); hosting guide `deploy/DEPLOY.md`
+- Host / update production (one command, idempotent): `deploy/start_hosting.sh`
+- Production by hand: `GALAXY_PYTHON=$(which python) scripts/run_prod.sh` (+ `cloudflared tunnel --url http://127.0.0.1:8000` for a temporary public URL); hosting guide `deploy/DEPLOY.md`
 - Legacy game: `cd legacy && python server.py` and `python game.py` (needs pygame)
 
 ## Engineering conventions
