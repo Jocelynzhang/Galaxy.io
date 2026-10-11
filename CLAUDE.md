@@ -104,6 +104,17 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - The menu spectates the leader live (attract mode); `?watch=1` hides the menu (classroom screen).
 - Dev gallery of every object: http://localhost:8000/dev/gallery.html (`?boost=1`, `?fx=supernova`).
 
+**2026-10-11** (M5)
+- Hosting: the product owner's **Mac Studio** at **galaxyio.fun** via **Cloudflare Tunnel** (no port
+  forwarding, home IP hidden, automatic HTTPS). The server runs as a launchd LaunchAgent
+  (`deploy/install_mac_service.sh`), `cloudflared service install` for the tunnel. Docker dropped
+  (not needed on a single Mac). Full steps: `deploy/DEPLOY.md`.
+- Safeguards: per-IP (8) and total (300) connection caps, 40-human cap (extra visitors spectate),
+  message token bucket + flood disconnect, join cooldown, Origin check (`GALAXY_ALLOWED_ORIGINS`),
+  crash-safe game loop, `/healthz`. Real IP from `CF-Connecting-IP` when the peer is localhost.
+- Verified on the laptop with a quick tunnel (`cloudflared tunnel --url http://127.0.0.1:8000`):
+  played through the public HTTPS URL in Chrome.
+
 ## Science ladder (real-mass ranges shown in the HUD, log-mapped within each level)
 | # | Level | Real mass | Fact-card examples |
 |---|---|---|---|
@@ -126,7 +137,7 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - [x] **M2 Mechanics:** speed curve, boost + ejecta, food gravity, decay, ladder, death screen, NPCs
 - [x] **M3 HUD + science:** leaderboard, progress bar, real-mass readout, fact cards, name filter
 - [x] **M4 Visuals:** lensing grid shader, boost particles, 12 animations, supernova
-- [ ] **M5 Deploy:** Dockerfile, host, HTTPS/wss, rate limits, internet play-test
+- [x] **M5 Deploy:** Mac + Cloudflare Tunnel, safeguards, launchd service, internet play-test
 - Later: touch controls, sound, optional accounts or high scores, multiple rooms
 
 ## Commands
@@ -144,6 +155,7 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - Headless screenshot (no browser extension needed):
   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --user-data-dir=<tmp> --window-size=1280,720 --virtual-time-budget=6000 --screenshot=out.png "http://127.0.0.1:8000/?name=TQ"`
   (Chrome may not exit after the shot; wrap it in `perl -e 'alarm 45; exec @ARGV'` and kill the profile's process.)
+- Production: `GALAXY_PYTHON=$(which python) scripts/run_prod.sh` (+ `cloudflared tunnel --url http://127.0.0.1:8000` for a temporary public URL); hosting guide `deploy/DEPLOY.md`
 - Legacy game: `cd legacy && python server.py` and `python game.py` (needs pygame)
 
 ## Engineering conventions

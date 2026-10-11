@@ -82,6 +82,11 @@ async function onMessage(msg) {
       state.push(msg);
       if (msg.lb && playing) hud.leaderboard(msg.lb, msg.rank, msg.me.id);
       break;
+    case 'full':
+      joinEl.hidden = false;
+      joinButton.disabled = false;
+      statusEl.textContent = 'The universe is full right now! Watching for a moment, then try again.';
+      break;
     case 'dead':
       playing = false;
       hud.show(false);

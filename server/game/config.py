@@ -82,6 +82,15 @@ SCREEN_R0 = 24.0
 ZOOM_EXP = 0.6
 VIEW_MARGIN = 150            # extra world units sent around the visible area
 
+# --- public-server limits ---
+MAX_CONNECTIONS = 300          # total open WebSockets
+MAX_CONNECTIONS_PER_IP = 8     # a family/classroom behind one IP still fits
+MAX_HUMANS = 40                # beyond this, visitors can watch but not join
+MSG_RATE = 40.0                # messages per second per connection (client sends ~20)
+MSG_BURST = 80.0
+MSG_ABUSE_DROPS = 400          # rate-limited messages before the connection is closed
+JOIN_COOLDOWN_S = 1.0          # minimum time between joins on one connection
+
 # --- input / names ---
 NAME_MAX_LEN = 16
 DEFAULT_NAME = "Stardust"
