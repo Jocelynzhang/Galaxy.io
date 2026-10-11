@@ -14,6 +14,18 @@ kid's browser ──https/wss──▶ Cloudflare ◀──tunnel── cloudfla
                                                      └──────── your Mac Studio ────────┘
 ```
 
+## Quick start: one command
+
+```bash
+deploy/start_hosting.sh
+```
+
+It does everything in sections 1–2 below (installs cloudflared, clones or updates `~/universe-io`, sets up
+Python, installs both background services, creates the tunnel and DNS, checks the public URL) and
+skips steps that are already done. The first run opens a browser for the Cloudflare login. Re-run it any
+time to update to the latest `master` and restart. It prints the Mac settings it can't change for you.
+The manual steps below explain what it does.
+
 ## 0. Try it without a domain (2 minutes)
 
 ```bash
