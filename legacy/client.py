@@ -1,3 +1,4 @@
+import os
 import socket
 import _pickle as pickle
 
@@ -11,10 +12,10 @@ class Network:
     def __init__(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         #self.client.settimeout(10.0)
-        self.host = "172.26.99.81"
-        # self.host = "127.0.0.1"
+        # override with e.g. GALAXY_HOST=172.26.99.81 to join a remote server
+        self.host = os.environ.get("GALAXY_HOST", "127.0.0.1")
 
-        self.port = 5555
+        self.port = int(os.environ.get("GALAXY_PORT", 5555))
         self.addr = (self.host, self.port)
 
     def connect(self, name):
