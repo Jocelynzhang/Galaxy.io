@@ -28,14 +28,16 @@ SPAWN_SHIELD_S = 3.0         # newly spawned objects can't be eaten for this lon
 RADIUS_K = 4.0               # radius = RADIUS_K * sqrt(mass)
 
 # speed = SPEED_V0 * mass^-SPEED_EXP, never below SPEED_MIN (world units / second)
-SPEED_V0 = 230.0
+SPEED_V0 = 300.0             # 2026-10-11: +30% (was 230) for a faster pace
 SPEED_EXP = 0.25
-SPEED_MIN = 40.0
-ACCEL = 8.0                  # how quickly velocity approaches the target (1/s)
+SPEED_MIN = 52.0
+ACCEL = 10.0                 # how quickly velocity approaches the target (1/s)
 
 # eating: A eats B if m_A >= EAT_RATIO * m_B and dist < r_A - EAT_OVERLAP * r_B
-EAT_RATIO = 1.25
-EAT_OVERLAP = 0.4
+# (EAT_OVERLAP 0 = swallowed as soon as B's centre crosses A's edge, i.e. half of B is inside A).
+# Was 1.25 / 0.4: same-level objects overlapped by more than half and nothing happened.
+EAT_RATIO = 1.15
+EAT_OVERLAP = 0.0
 EAT_EFFICIENCY = 0.9         # fraction of the victim's mass the eater gains
 
 # --- boost (hold left mouse) ---
@@ -45,7 +47,7 @@ BOOST_LOSS_FRAC = 0.03       # fraction of mass shed per second while boosting
 EJECTA_MASS_FRAC = 0.003     # each pellet's mass as a fraction of the booster's mass...
 EJECTA_MASS_MIN = 1.0        # ...clamped to this range
 EJECTA_MASS_MAX = 25.0
-EJECTA_SPEED = 420.0         # launch speed backward (world units / s)
+EJECTA_SPEED = 540.0         # launch speed backward (world units / s)
 EJECTA_SPREAD = 0.26         # half-angle of the exhaust cone (radians, ~15 degrees)
 EJECTA_DRAG = 4.0            # velocity decay rate (1/s)
 EJECTA_ARM_S = 0.25          # others may eat a pellet after this many seconds
@@ -66,15 +68,25 @@ DECAY = [0, 0, 0, 0, 0, 0, 0.0004, 0.0006, 0.0008, 0.001, 0.0013, 0.0016]
 TARGET_PLAYERS = 10          # humans + NPCs the world aims for
 NPC_RESPAWN_S = 3.0          # delay before a missing NPC slot is refilled
 NPC_SPAWN_MASS = (10.0, 300.0)  # log-uniform spawn mass range, so there is prey and danger
-NPC_THINK_S = (0.2, 0.4)     # reaction delay range
+NPC_THINK_S = (0.12, 0.25)    # reaction delay range
 # NPC "slots": each slot has a fixed ambition (max level) and personality. Above its cap an NPC
 # sheds mass fast, so the world keeps a stable mix of small, medium and big objects and the very
 # top of the leaderboard is left for humans. Slots are filled in this order (first = most kept).
 NPC_SLOTS = [  # (max level, hunter)
-    (6, False), (3, False), (5, True), (8, False), (4, False),
-    (7, False), (2, False), (9, True), (5, False), (6, False),
+    (6, False), (3, False), (5, True), (8, True), (4, False),
+    (7, False), (2, True), (9, True), (5, False), (6, False),
 ]
 NPC_OVERCAP_DECAY = 0.02     # extra fraction of mass lost per second above the cap
+# NPC brains (2026-10-11: made more aggressive; old values in brackets)
+NPC_SENSE = (5.0, 600.0)     # sensing range = k * radius + c   [4, 450]
+NPC_CHASE_S = (6.0, 3.0)     # how long a hunter / cautious NPC chases one target   [5, 2]
+NPC_GIVE_UP_S = 2.0          # rest after a chase times out, so players can escape   [3]
+NPC_SNACK_DIST = (3.0, 200.0)  # cautious NPCs start chases within k * radius + c   [2, 80]
+NPC_CHASE_BOOST = (0.8, 0.4)   # chance per think to boost at close prey, hunter / cautious   [0.6, 0.25]
+NPC_BOOST_RATIO = 1.35       # only boost-chase prey this much lighter (boosting costs mass)   [1.6]
+NPC_FLEE_BOOST = 0.9         # chance per think to boost away from a close threat   [0.7]
+NPC_LEAD_S = 0.8             # aim at where the prey will be, up to this many seconds ahead   [0]
+NPC_AIM_NOISE = (0.1, 0.25)    # steering error (radians) while chasing / otherwise   [0.25, 0.25]
 
 # --- camera ---
 # on-screen radius = SCREEN_R0 * (r / r_start) ** ZOOM_EXP ; zoom = screen radius / world radius

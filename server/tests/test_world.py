@@ -28,8 +28,8 @@ def test_camera_zooms_out_as_you_grow():
 
 
 def test_eat_ratio():
-    assert can_eat(125, 100)
-    assert not can_eat(120, 100)
+    assert can_eat(100 * C.EAT_RATIO, 100)
+    assert not can_eat(100 * C.EAT_RATIO - 1, 100)
 
 
 def test_player_moves_toward_input_angle_and_stays_in_world():
@@ -84,6 +84,30 @@ def test_big_player_eats_small_one():
     assert deaths[0].killer_name == "big"
     assert big.mass == pytest.approx(100 + 20 * C.EAT_EFFICIENCY)
     assert small.id not in w.players
+
+
+def test_same_level_neighbour_is_swallowed_once_half_inside():
+    # Regression (play-test 2026-10-11): two gas giants, one 20% heavier, overlapping by half,
+    # used to sit on top of each other because the old rule needed a 25% margin and a deep overlap.
+    w = empty_world()
+    a, b = w.add_player("a"), w.add_player("b")
+    a.mass, b.mass = 360, 300
+    assert level_index(a.mass) == level_index(b.mass)
+    b.shield_until = 0
+    a.x = a.y = b.y = 1000
+    b.x = a.x + a.radius - 1        # b's centre just inside a's edge
+    deaths = w._eat_players()
+    assert [d.victim_id for d in deaths] == [b.id]
+
+
+def test_not_swallowed_while_centre_is_outside():
+    w = empty_world()
+    a, b = w.add_player("a"), w.add_player("b")
+    a.mass, b.mass = 360, 300
+    b.shield_until = 0
+    a.x = a.y = b.y = 1000
+    b.x = a.x + a.radius + 1
+    assert w._eat_players() == []
 
 
 def test_similar_sizes_bounce_off_instead_of_eating():

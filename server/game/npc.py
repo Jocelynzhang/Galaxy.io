@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from . import config as C
 from .entities import Player
 from .levels import LEVELS
-from .physics import can_eat
+from .physics import can_eat, speed_for
 from .world import World
 
 ASTRONOMERS = [
@@ -90,7 +90,7 @@ def think(world: World, me: Player, brain: Brain, now: float) -> None:
     """Pick a heading: flee threats, chase prey, otherwise graze toward food."""
     rng = brain.rng
     r = me.radius
-    sense = r * 4 + 450
+    sense = r * C.NPC_SENSE[0] + C.NPC_SENSE[1]
     flee_x = flee_y = 0.0
     prey: Player | None = None
     prey_d = math.inf
@@ -110,12 +110,15 @@ def think(world: World, me: Player, brain: Brain, now: float) -> None:
             prey, prey_d = o, d
 
     boost = False
+    noise = C.NPC_AIM_NOISE[1]
     if math.hypot(flee_x, flee_y) > 0.25:
         angle = math.atan2(flee_y, flee_x)
-        boost = math.hypot(flee_x, flee_y) > 0.45 and rng.random() < 0.7
+        boost = math.hypot(flee_x, flee_y) > 0.35 and rng.random() < C.NPC_FLEE_BOOST
     elif prey is not None and _wants_chase(brain, prey, prey_d, r, now):
-        angle = math.atan2(prey.y - me.y, prey.x - me.x)
-        boost = prey_d < r * 3 + 150 and me.mass > prey.mass * 1.6 and rng.random() < (0.6 if brain.hunter else 0.25)
+        angle = _intercept(me, prey, prey_d)
+        noise = C.NPC_AIM_NOISE[0]
+        boost = (prey_d < r * 4 + 250 and me.mass > prey.mass * C.NPC_BOOST_RATIO
+                 and rng.random() < C.NPC_CHASE_BOOST[0 if brain.hunter else 1])
     else:
         brain.chase_id = None
         angle = _food_heading(world, me, sense)
@@ -126,7 +129,7 @@ def think(world: World, me: Player, brain: Brain, now: float) -> None:
         boost = me.mass > C.BOOST_MIN_MASS * 3 and rng.random() < 0.03
 
     angle = _avoid_walls(me, angle, r)
-    angle += rng.uniform(-0.25, 0.25)  # imperfect steering keeps NPCs beatable
+    angle += rng.uniform(-noise, noise)  # imperfect steering keeps NPCs beatable
     world.set_input(me.id, angle, 1.0, boost)
 
 
@@ -135,15 +138,21 @@ def _wants_chase(brain: Brain, prey: Player, d: float, r: float, now: float) -> 
         return False
     if brain.chase_id != prey.id:
         # hunters chase anything they sense; cautious NPCs only snack on very close prey
-        if not brain.hunter and d > r * 2 + 80:
+        if not brain.hunter and d > r * C.NPC_SNACK_DIST[0] + C.NPC_SNACK_DIST[1]:
             return False
         brain.chase_id = prey.id
-        brain.chase_until = now + (5.0 if brain.hunter else 2.0)
+        brain.chase_until = now + C.NPC_CHASE_S[0 if brain.hunter else 1]
     if now > brain.chase_until:
         brain.chase_id = None
-        brain.give_up_until = now + 3.0   # take a break so kids can escape
+        brain.give_up_until = now + C.NPC_GIVE_UP_S   # take a break so kids can escape
         return False
     return True
+
+
+def _intercept(me: Player, prey: Player, d: float) -> float:
+    """Heading toward where the prey will be when we get there (capped look-ahead)."""
+    t = min(C.NPC_LEAD_S, d / max(1.0, speed_for(me.mass)))
+    return math.atan2(prey.y + prey.vy * t - me.y, prey.x + prey.vx * t - me.x)
 
 
 def _food_heading(world: World, me: Player, sense: float) -> float | None:
