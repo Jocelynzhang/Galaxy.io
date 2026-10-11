@@ -171,6 +171,7 @@ def test_npc_ai_flees_bigger_and_chases_smaller():
     w.remove_player(threat.id)
     prey = w.add_player("small", mass=20)
     prey.x, prey.y = 2000, 2000 + me.radius + 40                       # just below us
+    prey.shield_until = 0
     think(w, me, Brain(hunter=True, rng=random.Random(0)), 0.0)
     assert math.sin(me.angle) > 0, "should head down toward the prey"
 
@@ -180,3 +181,16 @@ def test_simulation_smoke():
     res = run(minutes=0.5, pilots=1, seed=0)
     assert res["players_end"] >= C.TARGET_PLAYERS
     assert res["tick_ms_p99"] < 1000 / C.TICK_HZ
+
+
+def test_npcs_ignore_shielded_newcomers():
+    from server.game.npc import Brain, think
+    import random
+    w = empty_world()
+    me = w.add_player("npc", is_bot=True, mass=100)
+    me.x, me.y = 2000, 2000
+    kid = w.add_player("kid")
+    kid.x, kid.y = 2000, 2000 + me.radius + 40
+    for seed in range(5):
+        think(w, me, Brain(hunter=True, rng=random.Random(seed)), 0.0)
+        assert not (math.sin(me.angle) > 0.9), "should not beeline at a shielded kid"

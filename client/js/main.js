@@ -1,12 +1,16 @@
 import { Renderer } from './render.js';
 import { State } from './state.js';
-import { LEVELS } from './levels.js';
+import { LEVELS, loadLadder, setStartMass } from './levels.js';
+import { Hud, randomFact } from './hud.js';
+
+await loadLadder();
 
 const $ = (id) => document.getElementById(id);
-const joinEl = $('join'), deadEl = $('dead'), hudEl = $('hud');
+const joinEl = $('join'), deadEl = $('dead');
 const form = $('join-form'), nameEl = $('name'), statusEl = $('join-status');
 
 const state = new State();
+const hud = new Hud();
 let renderer = null;
 let ws = null;
 let playing = false;
@@ -35,7 +39,7 @@ function connect() {
     ws.onclose = () => {
       ws = null;
       playing = false;
-      hudEl.hidden = true;
+      hud.show(false);
       deadEl.hidden = true;
       joinEl.hidden = false;
       statusEl.textContent = 'Disconnected from the server. Press Confirm to rejoin.';
@@ -53,21 +57,25 @@ async function onMessage(msg) {
         await renderer.init($('stage'), msg.world);
         renderer.foodR = msg.foodR;
       }
+      setStartMass(msg.startMass);
       state.clearMotion();
+      hud.reset();
       playing = true;
       joinEl.hidden = true;
       deadEl.hidden = true;
-      hudEl.hidden = false;
+      hud.show(true);
       break;
     case 's':
       state.push(msg);
+      if (msg.lb) hud.leaderboard(msg.lb, msg.rank, msg.me.id);
       break;
     case 'dead':
       playing = false;
-      hudEl.hidden = true;
+      hud.show(false);
       $('dead-msg').textContent =
         `${msg.by} swallowed you at ${Math.round(msg.mass)} mass. ` +
         `Best level reached: ${LEVELS[msg.best].name}.`;
+      $('dead-fact').textContent = randomFact(msg.best);
       deadEl.hidden = false;
       break;
   }
@@ -141,6 +149,6 @@ function frame() {
   const view = state.sample(t);
   if (!view) return;
   renderer.draw(view);
-  $('hud-mass').textContent = `${LEVELS[view.me.lvl].name} · mass ${Math.round(view.me.m)}`;
+  hud.update(view.me);
 }
 requestAnimationFrame(frame);

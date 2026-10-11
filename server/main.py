@@ -6,15 +6,14 @@ Protocol (JSON text frames):
     {"t": "in", "a": radians, "th": 0..1, "b": 0|1}
     {"t": "view", "vw": px, "vh": px}
   server -> client
-    {"t": "welcome", "id": int, "world": [w, h], "foodR": float, "tickHz": int}
-    {"t": "s", ...}  snapshot, see World.snapshot_for
+    {"t": "welcome", "id": int, "world": [w, h], "foodR": float, "tickHz": int, "startMass": float}
+    {"t": "s", ...}  snapshot, see World.snapshot_for (includes "lb" leaderboard about once a second)
     {"t": "dead", "by": name, "mass": float, "best": level index}
 """
 import asyncio
 import json
 import math
 import time
-import unicodedata
 from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -23,19 +22,11 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
 from .game import config as C
+from .game.names import clean_name
 from .game.npc import NpcManager
 from .game.world import World
 
 CLIENT_DIR = Path(__file__).resolve().parent.parent / "client"
-
-
-def clean_name(raw) -> str:
-    if not isinstance(raw, str):
-        return C.DEFAULT_NAME
-    # drop control/format characters, collapse whitespace
-    text = "".join(ch for ch in raw if unicodedata.category(ch)[0] != "C")
-    text = " ".join(text.split())[: C.NAME_MAX_LEN]
-    return text or C.DEFAULT_NAME
 
 
 def _finite(v, default=0.0) -> float:
@@ -104,7 +95,7 @@ class Game:
         s.player_id = p.id
         self.by_player[p.id] = s
         s.send({"t": "welcome", "id": p.id, "world": [C.WORLD_W, C.WORLD_H],
-                "foodR": C.FOOD_RADIUS, "tickHz": C.TICK_HZ})
+                "foodR": C.FOOD_RADIUS, "tickHz": C.TICK_HZ, "startMass": C.START_MASS})
 
     def leave(self, s: Session) -> None:
         self.sessions.discard(s)
@@ -133,9 +124,11 @@ class Game:
                     s.player_id = None
                     s.send({"t": "dead", "by": d.killer_name, "mass": round(d.mass, 1), "best": d.best_level})
             if self.world.tick % C.SNAPSHOT_EVERY == 0:
+                # the leaderboard rides along about once a second
+                board = self.world.leaderboard() if self.world.tick % C.LEADERBOARD_EVERY == 0 else None
                 for s in self.sessions:
                     if s.ready_for_snapshot:
-                        snap = self.world.snapshot_for(s.player_id, s.vw, s.vh, s.known_food)
+                        snap = self.world.snapshot_for(s.player_id, s.vw, s.vh, s.known_food, board)
                         snap["ts"] = round(time.perf_counter(), 4)
                         s.send_snapshot(snap)
             next_t += dt

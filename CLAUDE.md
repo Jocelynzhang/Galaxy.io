@@ -79,6 +79,17 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - Workflow: Claude opens a PR per milestone and merges it when tests pass; the product owner
   play-tests on master and sends feedback.
 
+**2026-10-11** (M3)
+- The ladder (names, thresholds, real-mass ranges, colours, facts) lives in `client/data/ladder.json`,
+  read by both server and client. Edit facts there.
+- Real-mass readout: the server maps game mass to real kg (log-linear within each level) and sends
+  log10(kg); the client formats it ("≈ 1.1 Earths · like Earth"). The neutron star is *lighter*
+  than the giant before it on purpose (the supernova blows most of the mass away); the fact card says so.
+- Kid safety: spawn far from anything that can eat you, 3 s spawn shield (bubble ring), and NPCs
+  ignore shielded players. Found by play-testing: I was eaten 7 s after spawning.
+- Name filter in `server/game/names.py` (substring list + whole-word list + allowlist for
+  Scunthorpe-style false positives). Bad names become "Stardust".
+
 ## Science ladder (real-mass ranges shown in the HUD, log-mapped within each level)
 | # | Level | Real mass | Fact-card examples |
 |---|---|---|---|
@@ -99,7 +110,7 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - [x] **M0 Bootstrap:** CLAUDE.md, legacy/ move, requirements, .gitignore
 - [x] **M1 Skeleton:** FastAPI + WS, name screen, mouse steering, food, eating, big world + camera
 - [x] **M2 Mechanics:** speed curve, boost + ejecta, food gravity, decay, ladder, death screen, NPCs
-- [ ] **M3 HUD + science:** leaderboard, progress bar, real-mass readout, fact cards, name filter
+- [x] **M3 HUD + science:** leaderboard, progress bar, real-mass readout, fact cards, name filter
 - [ ] **M4 Visuals:** lensing grid shader, boost particles, 12 animations, supernova
 - [ ] **M5 Deploy:** Dockerfile, host, HTTPS/wss, rate limits, internet play-test
 - Later: touch controls, sound, optional accounts or high scores, multiple rooms
@@ -111,6 +122,10 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - Tests: `pytest server/tests`
 - Pacing sim: `python -m server.sim [minutes] [pilots] [seed]` (time to each level, size mix, tick cost)
 - Auto-join for testing: http://localhost:8000/?name=TQ
+- Play-test in real Chrome via DevTools (types a name, steers, boosts, screenshots, reads the HUD):
+  `python tools/playtest.py <out_dir> [seconds]` (server must be running on :8000)
+- Evaluate client JS in the page (no Node needed): `python tools/jseval.py "import('/js/realmass.js').then(m => m.formatRealMass(24.8))"`
+- WebSocket load test: `python tools/loadtest.py [bots] [seconds]` (snapshot rate + KB/s per client)
 - Headless screenshot (no browser extension needed):
   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --user-data-dir=<tmp> --window-size=1280,720 --virtual-time-budget=6000 --screenshot=out.png "http://127.0.0.1:8000/?name=TQ"`
   (Chrome may not exit after the shot; wrap it in `perl -e 'alarm 45; exec @ARGV'` and kill the profile's process.)

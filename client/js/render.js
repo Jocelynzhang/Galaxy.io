@@ -115,9 +115,11 @@ export class Renderer {
                    stroke: { color: 0x000000, width: 6 } },
         });
         label.anchor.set(0.5);
-        node.addChild(body, label);
+        // spawn-protection bubble
+        const shield = new Graphics().circle(0, 0, 1).stroke({ width: 0.06, color: 0x9fe8ff, alpha: 0.9 });
+        node.addChild(body, shield, label);
         this.playerLayer.addChild(node);
-        e = { node, body, label, lvl: -1, name: null };
+        e = { node, body, shield, label, lvl: -1, name: null };
         this.players.set(p.id, e);
       }
       if (e.lvl !== p.lvl) { e.body.tint = LEVELS[p.lvl].color; e.lvl = p.lvl; }
@@ -126,6 +128,8 @@ export class Renderer {
       e.node.position.set(p.x, p.y);
       e.node.zIndex = p.r;
       e.body.width = e.body.height = p.r * 2;
+      e.shield.visible = !!p.shield;
+      if (p.shield) e.shield.scale.set(p.r * (1.18 + 0.04 * Math.sin(performance.now() / 120)));
       // keep names readable on screen regardless of zoom
       const screenPx = Math.min(30, Math.max(12, p.r * z * 0.45));
       e.label.scale.set(screenPx / z / NAME_FONT);
