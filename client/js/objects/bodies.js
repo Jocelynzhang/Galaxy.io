@@ -224,7 +224,10 @@ class BlackHole extends Body {
     back.scale.y = tilt;
     this.diskBack = sprite(diskTex, 2.7);
     back.addChild(this.diskBack);
-    const core = new Graphics().circle(0, 0, 0.32).fill(0x000000);
+    // Pixi picks circle smoothness from the drawn radius, so draw big and scale down
+    // (a radius-0.32 circle scaled up 300x came out as an octagon)
+    const core = new Graphics().circle(0, 0, 320).fill(0x000000);
+    core.scale.set(0.001);
     const photonRing = sprite(sprites.ring(), 0.9, { tint: hot ? 0xe0eaff : 0xffd9a0, alpha: 0.95, add: true });
     const front = new Container();
     front.scale.y = tilt;
@@ -252,21 +255,26 @@ class BlackHole extends Body {
 class Galaxy extends Body {
   constructor(seed) {
     super();
-    this.extent = 1.25;
-    this.view.addChild(sprite(sprites.glow(), 2.6, { tint: 0x8f7bff, alpha: 0.3, add: true }));
+    this.extent = 1.3;
+    this.halo = sprite(sprites.glow(), 3.2, { tint: 0x8f8fff, alpha: 0.35, add: true });
+    this.view.addChild(this.halo);
     this.disk = new Container();
-    this.disk.scale.y = 0.8;          // seen slightly from the side
-    this.arms = sprite(sprites.spiral(0), 2.4, { add: true });
-    this.bright = sprite(sprites.spiral(1), 2.4, { add: true, alpha: 0.9 });
-    this.disk.addChild(this.arms, this.bright);
+    this.disk.scale.y = 0.78;          // seen slightly from the side
+    this.glowLayer = sprite(sprites.spiral(0), 2.7, { add: true });
+    this.stars = sprite(sprites.spiral(1), 2.7, { add: true });
+    this.knots = sprite(sprites.spiral(2), 2.7, { add: true });
+    this.disk.addChild(this.glowLayer, this.stars, this.knots);
     this.disk.rotation = (seed % 7) * 0.4;
     this.view.addChild(this.disk);
   }
 
   update(dt, o) {
     super.update(dt, o);
-    this.arms.rotation -= dt * 0.12;
-    this.bright.rotation -= dt * 0.15;
+    // a slow, majestic turn; the bright young clusters drift a touch faster than the haze
+    this.glowLayer.rotation -= dt * 0.09;
+    this.stars.rotation -= dt * 0.09;
+    this.knots.rotation -= dt * 0.1;
+    this.halo.alpha = 0.32 + 0.05 * Math.sin(this.t * 0.8);
   }
 }
 
