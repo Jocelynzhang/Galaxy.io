@@ -10,7 +10,7 @@ import sys
 import time
 
 from .game import config as C
-from .game.levels import LEVELS
+from .game.levels import LEVELS, level_index
 from .game.npc import Brain, NpcManager, think
 from .game.world import World
 
@@ -36,6 +36,7 @@ def run(minutes: float = 15, pilots: int = 1, seed: int = 0) -> dict:
     tick_ms = []
     mix: list[str] = []          # level histogram of all objects, once per minute
     peak = {"mass": 0.0, "level": 0}
+    pilot_deaths: list[str] = []
     while t < minutes * 60:
         for pid, (brain, life, born) in list(pilot.items()):
             if pid not in world.players:
@@ -47,8 +48,14 @@ def run(minutes: float = 15, pilots: int = 1, seed: int = 0) -> dict:
                 think(world, world.players[pid], brain, t)
         t0 = time.perf_counter()
         npcs.update(dt)
-        world.step(dt)
+        deaths = world.step(dt)
         tick_ms.append((time.perf_counter() - t0) * 1000)
+        for d in deaths:
+            if d.victim_id in pilot:
+                killer = next((p for p in world.players.values() if p.name == d.killer_name), None)
+                k_lvl = LEVELS[killer.level].name if killer else "?"
+                pilot_deaths.append(f"{t / 60:4.1f} min: {LEVELS[level_index(d.mass)].name} (mass {d.mass:.0f}, "
+                                    f"alive {t - pilot[d.victim_id][2]:.0f} s) eaten by {d.killer_name} ({k_lvl})")
         t += dt
         if world.tick % (60 * C.TICK_HZ) == 0:
             lv = sorted(p.level for p in world.players.values())
@@ -67,6 +74,7 @@ def run(minutes: float = 15, pilots: int = 1, seed: int = 0) -> dict:
     tick_ms.sort()
     return {
         "lives": lives,
+        "pilot_deaths": pilot_deaths,
         "mix": mix,
         "peak": peak,
         "tick_ms_p50": round(statistics.median(tick_ms), 2),
@@ -91,6 +99,10 @@ def main():
     print(f"{len(res['lives'])} pilot lives; best life reached:")
     for lvl, secs in sorted(best.items()):
         print(f"  {LEVELS[lvl].name:20s} at {secs / 60:5.1f} min")
+    if res["pilot_deaths"]:
+        print("pilot deaths:")
+        for line in res["pilot_deaths"]:
+            print("  " + line)
 
 
 if __name__ == "__main__":

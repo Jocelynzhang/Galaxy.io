@@ -128,6 +128,21 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
   wrote a plist without `tunnel run`; fixed by hand (steps in DEPLOY.md). Verified wss join through
   the public URL and a 403 for a foreign Origin.
 
+**2026-10-11** (play-test feedback: swallow bug, pace, bot difficulty)
+- "Can't swallow a same-level neighbour": no code bug; the rules were too strict. Measured with a
+  probe: overlaps where nothing happened were mostly "not deep enough" (old rule: B's centre 40% of
+  r_B inside A's edge) plus same-level pairs under the 25% mass margin (only 12% wider, look identical).
+  Now `EAT_RATIO` 1.15 and `EAT_OVERLAP` 0 (swallowed once B's centre crosses A's edge). Regression tests.
+- Pace +30%: `SPEED_V0` 230→300, `SPEED_MIN` 40→52, `ACCEL` 8→10, `EJECTA_SPEED` 420→540.
+- Bots more aggressive: 4 of 10 slots are hunters (was 2), wider sensing, longer chases, shorter
+  rest, boost-chasing, intercept aiming (lead the target), tighter aim while chasing, faster reactions.
+  All in `config.py` under "NPC brains" with the old values in brackets. Kid safety unchanged (spawn
+  shield, safe spawn spot, NPCs ignore shielded players).
+- Sim (4 seeds, 15 min): bots-only world 10 eats per 10 min (was 2). The sim pilot dies 3–6 times
+  per run (was 1–2) and its best life reaches giant star (in ~3 min on one seed, was 7.7 min) but
+  no longer black hole / galaxy within 15 min. A first, harsher setting (5 hunters) killed it every
+  1–2 min and was pulled back. `python -m server.sim` now prints each pilot death and its killer.
+
 ## Science ladder (real-mass ranges shown in the HUD, log-mapped within each level)
 | # | Level | Real mass | Fact-card examples |
 |---|---|---|---|
