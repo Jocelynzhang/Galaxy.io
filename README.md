@@ -1,12 +1,18 @@
-# Galaxy-IO
-An IO game based on realistic physical mechanism, such as gravity and Newtonion dynamics
+# Galaxy.io
+A browser IO game about the universe. Start as a speck of dust, eat and grow, and climb the
+astrophysical ladder: asteroid → planet → star → black hole → quasar → galaxy.
 
-# Update:
-1. Change background
-2. Assign image to players
-3. Refresh new particles at a higher rate, but lower amount each time
+Authors: Jocelyn, TQ
 
-Author: Jocelyn, TQ
+## Run locally
+```bash
+conda activate galaxyio            # Python 3.11
+pip install -r requirements-dev.txt
+uvicorn server.main:app --reload --port 8000
+# open http://localhost:8000
+```
 
+Tests: `pytest server/tests`
 
-
+The original 2022 pygame LAN version is in `legacy/`.
+See `CLAUDE.md` for the design, decisions and roadmap.
