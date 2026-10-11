@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galaxy.io</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="stage"></div>
+
+  <div id="hud" hidden>
+    <div id="hud-mass"></div>
+  </div>
+
+  <section id="join" class="overlay">
+    <form id="join-form" class="card">
+      <h1>Galaxy<span>.io</span></h1>
+      <p class="tagline">Start as a speck of dust. Grow into a galaxy.</p>
+      <input id="name" name="name" maxlength="16" placeholder="Your name" autocomplete="off" autofocus>
+      <button type="submit">Confirm</button>
+      <p class="hint">Move with your mouse</p>
+      <p id="join-status" class="status"></p>
+    </form>
+  </section>
+
+  <section id="dead" class="overlay" hidden>
+    <div class="card">
+      <h2>Swallowed!</h2>
+      <p id="dead-msg"></p>
+      <button id="again" type="button">Play again</button>
+    </div>
+  </section>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
