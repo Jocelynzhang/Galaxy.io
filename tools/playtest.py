@@ -1,6 +1,6 @@
 """Play Galaxy.io in headless Chrome via the DevTools protocol: steer toward food, boost, screenshot.
 
-usage: python play.py <out_dir> [seconds]
+usage: python playtest.py <out_dir> [seconds] [base_url]
 """
 import asyncio
 import base64
@@ -18,6 +18,7 @@ import websockets
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 W, H = 1280, 720
 PORT = 9333
+BASE = sys.argv[3].rstrip("/") if len(sys.argv) > 3 else "http://127.0.0.1:8000"
 
 
 class Cdp:
@@ -78,7 +79,7 @@ async def main(out, seconds):
             pump = asyncio.create_task(cdp.pump())
             await cdp.call("Runtime.enable")
             await cdp.call("Emulation.setDeviceMetricsOverride", width=W, height=H, deviceScaleFactor=1, mobile=False)
-            await cdp.call("Page.navigate", url="http://127.0.0.1:8000/")
+            await cdp.call("Page.navigate", url=BASE + "/")
             await asyncio.sleep(2)
             await cdp.shot(f"{out}/01-join.png")
             # type a name and press Confirm like a kid would

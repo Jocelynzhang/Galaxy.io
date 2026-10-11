@@ -1,0 +1,10 @@
+# Cloudflare Tunnel config for the Mac Studio (copy to ~/.cloudflared/config.yml and fill in the
+# tunnel id printed by `cloudflared tunnel create galaxyio`).
+tunnel: <TUNNEL-ID>
+credentials-file: /Users/<you>/.cloudflared/<TUNNEL-ID>.json
+ingress:
+  - hostname: galaxyio.fun
+    service: http://127.0.0.1:8000
+  - hostname: www.galaxyio.fun
+    service: http://127.0.0.1:8000
+  - service: http_status:404
