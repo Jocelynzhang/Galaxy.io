@@ -1,5 +1,5 @@
 import { Application, Container, Graphics, Sprite, Text } from 'https://cdn.jsdelivr.net/npm/pixi.js@8.21.0/dist/pixi.min.mjs';
-import { FOOD_PALETTE, LEVELS } from './levels.js';
+import { LEVELS, foodColor } from './levels.js';
 
 const GRID = 100;            // world units between grid lines
 const BG = 0x0b1026;
@@ -34,7 +34,8 @@ export class Renderer {
     );
     this.dotTex = this.app.renderer.generateTexture(new Graphics().circle(0, 0, 16).fill(0xffffff));
 
-    this.food = new Map();     // id -> Sprite
+    this.food = new Map();     // id -> Sprite (with .tx/.ty target position)
+    this.movingFood = new Set();
     this.players = new Map();  // id -> { node, body, label, lvl, name }
     this.foodR = 4;
   }
@@ -46,19 +47,36 @@ export class Renderer {
   applyFood({ add, remove }) {
     for (const id of remove) {
       const s = this.food.get(id);
-      if (s) { s.destroy(); this.food.delete(id); }
+      if (s) { s.destroy(); this.food.delete(id); this.movingFood.delete(s); }
     }
-    for (const [id, x, y, c] of add) {
+    for (const [id, x, y, c, r] of add) {
       let s = this.food.get(id);
       if (!s) {
         s = new Sprite(this.dotTex);
         s.anchor.set(0.5);
-        s.width = s.height = this.foodR * 2;
-        s.tint = FOOD_PALETTE[c % FOOD_PALETTE.length];
+        s.tint = foodColor(c);
+        s.position.set(x, y);
         this.foodLayer.addChild(s);
         this.food.set(id, s);
+      } else {
+        this.movingFood.add(s);   // known pellet moved: glide there instead of jumping
       }
-      s.position.set(x, y);
+      s.width = s.height = r * 2;
+      s.tx = x;
+      s.ty = y;
+    }
+  }
+
+  // Smoothly move pellets (boost exhaust, food pulled by gravity) toward their latest position.
+  updateFood(dt) {
+    const k = Math.min(1, dt * 14);
+    for (const s of this.movingFood) {
+      s.x += (s.tx - s.x) * k;
+      s.y += (s.ty - s.y) * k;
+      if (Math.abs(s.tx - s.x) < 0.3 && Math.abs(s.ty - s.y) < 0.3) {
+        s.position.set(s.tx, s.ty);
+        this.movingFood.delete(s);
+      }
     }
   }
 

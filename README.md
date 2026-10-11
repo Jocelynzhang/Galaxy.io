@@ -8,7 +8,7 @@ Authors: Jocelyn, TQ
 ```bash
 conda activate galaxyio            # Python 3.11
 pip install -r requirements-dev.txt
-uvicorn server.main:app --reload --port 8000
+uvicorn server.main:app --reload --reload-dir server --port 8000
 # open http://localhost:8000
 ```
 

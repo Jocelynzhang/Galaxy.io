@@ -127,11 +127,16 @@ function sendInput() {
 setInterval(sendInput, 50);
 
 // ---------- render loop ----------
+let lastFrame = performance.now();
 function frame() {
   requestAnimationFrame(frame);
+  const nowMs = performance.now();
+  const dt = Math.min(0.1, (nowMs - lastFrame) / 1000);
+  lastFrame = nowMs;
   if (!renderer) return;
   const t = state.renderTime();
   for (const upd of state.dueFood(t)) renderer.applyFood(upd);
+  renderer.updateFood(dt);
   if (!playing) return;
   const view = state.sample(t);
   if (!view) return;

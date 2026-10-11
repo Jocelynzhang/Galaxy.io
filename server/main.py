@@ -23,6 +23,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
 from .game import config as C
+from .game.npc import NpcManager
 from .game.world import World
 
 CLIENT_DIR = Path(__file__).resolve().parent.parent / "client"
@@ -91,6 +92,7 @@ class Session:
 class Game:
     def __init__(self):
         self.world = World()
+        self.npcs = NpcManager(self.world)
         self.sessions: set[Session] = set()
         self.by_player: dict[int, Session] = {}
 
@@ -124,6 +126,7 @@ class Game:
         dt = 1.0 / C.TICK_HZ
         next_t = time.perf_counter()
         while True:
+            self.npcs.update(dt)
             for d in self.world.step(dt):
                 s = self.by_player.pop(d.victim_id, None)
                 if s is not None:
