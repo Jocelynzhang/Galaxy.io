@@ -124,6 +124,9 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
   `~/universe-io` (deploy with `git pull` there): macOS privacy protection (TCC) blocks launchd from
   reading `~/Documents`, where the dev checkout lives.
 - conda: use `--override-channels -c conda-forge` (the Anaconda default channels need a ToS acceptance).
+- Live 2026-10-11: tunnel `universe-io` (id 9269cdbe…), CNAMEs for apex + www. `cloudflared service install`
+  wrote a plist without `tunnel run`; fixed by hand (steps in DEPLOY.md). Verified wss join through
+  the public URL and a 403 for a foreign Origin.
 
 ## Science ladder (real-mass ranges shown in the HUD, log-mapped within each level)
 | # | Level | Real mass | Fact-card examples |
