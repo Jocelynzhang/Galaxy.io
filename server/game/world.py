@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from . import config as C
 from .entities import Food, Player, radius_for
-from .levels import level_index, real_mass_kg
+from .levels import level_index, real_mass_kg, settle_level
 from .physics import can_eat, overlaps_to_eat, speed_for, zoom_for
 
 
@@ -78,7 +78,7 @@ class World:
     def add_player(self, name: str, is_bot: bool = False, mass: float = C.START_MASS) -> Player:
         x, y = self._free_spot(radius_for(mass), mass)
         p = Player(id=next(self._ids), name=name, x=x, y=y, mass=mass, is_bot=is_bot,
-                   shield_until=self.tick + round(C.SPAWN_SHIELD_S * C.TICK_HZ))
+                   shield_until=self.tick + round(C.SPAWN_SHIELD_S * C.TICK_HZ), level=level_index(mass))
         self.players[p.id] = p
         self.best_level[p.id] = level_index(mass)
         return p
@@ -143,7 +143,7 @@ class World:
         a = p.angle + math.pi + self.rng.uniform(-C.EJECTA_SPREAD, C.EJECTA_SPREAD)
         ca, sa = math.cos(a), math.sin(a)
         f = Food(id=next(self._food_ids), x=0, y=0, mass=mass,
-                 color=C.EJECTA_COLOR_BASE + level_index(p.mass), moved_tick=self.tick, owner=p.id,
+                 color=C.EJECTA_COLOR_BASE + p.level, moved_tick=self.tick, owner=p.id,
                  edible_tick=self.tick + round(C.EJECTA_ARM_S * C.TICK_HZ),
                  owner_edible_tick=self.tick + round(C.EJECTA_OWNER_ARM_S * C.TICK_HZ))
         dist = p.radius + f.radius + 2
@@ -164,9 +164,9 @@ class World:
             self._eat_food(p)
         deaths = self._eat_players()
         for p in self.players.values():
-            lvl = level_index(p.mass)
-            if lvl > self.best_level[p.id]:
-                self.best_level[p.id] = lvl
+            p.level = settle_level(p.level, p.mass)
+            if p.level > self.best_level[p.id]:
+                self.best_level[p.id] = p.level
         missing = C.FOOD_TARGET - self.natural_food
         for _ in range(min(missing, C.FOOD_SPAWN_PER_TICK)):
             self._spawn_food()
@@ -193,7 +193,7 @@ class World:
         p.y = min(C.WORLD_H - r, max(r, p.y + p.vy * dt))
 
     def _decay(self, p: Player, dt: float) -> None:
-        p.mass -= p.mass * C.DECAY[level_index(p.mass)] * dt
+        p.mass -= p.mass * C.DECAY[p.level] * dt
 
     def _move_food(self, dt: float) -> None:
         moves: dict[int, tuple[float, float]] = {}
@@ -209,7 +209,7 @@ class World:
                 self.flying.discard(fid)
         # gravity: big objects pull food (never players) toward themselves
         for p in self.players.values():
-            g = C.GRAVITY[level_index(p.mass)]
+            g = C.GRAVITY[p.level]
             if g <= 0:
                 continue
             r = p.radius
@@ -269,10 +269,11 @@ class World:
         return sorted(self.players.values(), key=lambda p: p.mass, reverse=True)
 
     def snapshot_for(self, pid: int, view_w: float, view_h: float, known_food: dict[int, int],
-                     board: list[Player] | None = None) -> dict:
+                     board: list[Player] | None = None, spectating: bool = False) -> dict:
         """State visible to one player. `known_food` (food id -> tick last sent) is updated in place,
         so only new/moved food is sent and the client is told which ids to forget. When `board`
-        (players sorted by mass) is given, the top of it and this player's rank are included."""
+        (players sorted by mass) is given, the top of it and this player's rank are included.
+        `spectating` marks a camera-only view that follows `pid` (used behind the menus)."""
         me = self.players[pid]
         zoom = zoom_for(me.mass)
         hw = view_w / 2 / zoom + C.VIEW_MARGIN
@@ -280,7 +281,7 @@ class World:
         x0, y0, x1, y1 = me.x - hw, me.y - hh, me.x + hw, me.y + hh
 
         players = [
-            [p.id, round(p.x, 1), round(p.y, 1), round(p.radius, 1), level_index(p.mass), p.name,
+            [p.id, round(p.x, 1), round(p.y, 1), round(p.radius, 1), p.level, p.name,
              int(p.is_bot), int(p.boosting), int(self.shielded(p))]
             for p in self.players.values()
             if x0 - p.radius < p.x < x1 + p.radius and y0 - p.radius < p.y < y1 + p.radius
@@ -301,15 +302,17 @@ class World:
             "t": "s",
             "tk": self.tick,
             "me": {"id": pid, "x": round(me.x, 1), "y": round(me.y, 1), "m": round(me.mass, 1),
-                   "lvl": level_index(me.mass), "b": int(me.boosting),
-                   "rk": round(math.log10(real_mass_kg(me.mass)), 3)},
+                   "lvl": me.level, "b": int(me.boosting),
+                   "rk": round(math.log10(real_mass_kg(me.mass, me.level)), 3)},
             "z": round(zoom, 4),
             "p": players,
             "f": added,
             "fr": removed,
         }
+        if spectating:
+            snap["spec"] = 1
         if board is not None:
-            snap["lb"] = [[p.id, p.name, round(p.mass), level_index(p.mass), int(p.is_bot)]
+            snap["lb"] = [[p.id, p.name, round(p.mass), p.level, int(p.is_bot)]
                           for p in board[:C.LEADERBOARD_SIZE]]
             snap["rank"] = next(i for i, p in enumerate(board, 1) if p.id == pid)
         return snap

@@ -1,6 +1,8 @@
 // DOM heads-up display: leaderboard (top-left), level progress (top-right), fact toasts.
 // Player names come from other people: always use textContent, never innerHTML.
+import { Application } from 'https://cdn.jsdelivr.net/npm/pixi.js@8.21.0/dist/pixi.min.mjs';
 import { LEVELS, levelSpan } from './levels.js';
+import { createBody } from './objects/bodies.js';
 import { formatRealMass } from './realmass.js';
 
 const $ = (id) => document.getElementById(id);
@@ -19,6 +21,7 @@ export class Hud {
     this.realMass = $('real-mass');
     this.toast = $('toast');
     this.toastTimer = null;
+    this.icons = [new LevelIcon(this.iconCur), new LevelIcon(this.iconNext)];
     this.level = -1;
     this.factIndex = new Map();   // level -> next fact to show, so repeats cycle
   }
@@ -44,10 +47,14 @@ export class Hud {
       }
       this.level = lvl;
       setIcon(this.iconCur, lvl);
+      this.icons[0].set(lvl);
       this.lvlCur.textContent = LEVELS[lvl].name;
       const top = lvl === LEVELS.length - 1;
       this.iconNext.hidden = top;
-      if (!top) setIcon(this.iconNext, lvl + 1);
+      if (!top) {
+        setIcon(this.iconNext, lvl + 1);
+        this.icons[1].set(lvl + 1);
+      }
       this.lvlNext.textContent = top ? 'Top of the universe!' : `Next: ${LEVELS[lvl + 1].name}`;
     }
     const [lo, hi] = levelSpan(lvl);
@@ -103,6 +110,44 @@ export class Hud {
   hideToast() {
     this.toast.hidden = true;
     clearTimeout(this.toastTimer);
+  }
+}
+
+// A tiny live render of a level's object, shown in the progress panel.
+class LevelIcon {
+  constructor(el, size = 44) {
+    this.el = el;
+    this.size = size;
+    this.level = -1;
+    this.body = null;
+    this.app = null;
+    this.ready = this.init().catch(() => null);   // CSS gradient icon stays as a fallback
+  }
+
+  async init() {
+    const app = new Application();
+    await app.init({ width: this.size, height: this.size, backgroundAlpha: 0, antialias: true,
+                     autoDensity: true, resolution: window.devicePixelRatio || 1 });
+    this.app = app;
+    this.el.classList.add('live');
+    this.el.appendChild(app.canvas);
+    app.ticker.add((tk) => this.body?.update(tk.deltaMS / 1000, { frac: 0.5, px: this.scale }));
+    if (this.level >= 0) this.build();
+  }
+
+  set(level) {
+    if (level === this.level) return;
+    this.level = level;
+    if (this.app) this.build();
+  }
+
+  build() {
+    this.body?.destroy();
+    this.body = createBody(LEVELS[this.level].key, 0);
+    this.scale = (this.size * 0.42) / Math.max(1, this.body.extent);
+    this.body.view.scale.set(this.scale);
+    this.body.view.position.set(this.size / 2, this.size / 2);
+    this.app.stage.addChild(this.body.view);
   }
 }
 

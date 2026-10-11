@@ -28,6 +28,7 @@ class Player:
     boosting: bool = False       # actually boosting this tick (input held and allowed)
     boost_debt: float = 0.0      # shed mass not yet emitted as a pellet
     shield_until: int = 0        # can't be eaten before this tick (spawn protection)
+    level: int = 0               # ladder level, with hysteresis (see levels.settle_level)
 
     @property
     def radius(self) -> float:

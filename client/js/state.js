@@ -61,6 +61,7 @@ export class State {
       players.push(pa ? { ...pb, x: lerp(pa.x, pb.x, k), y: lerp(pa.y, pb.y, k), r: lerp(pa.r, pb.r, k) } : pb);
     }
     return {
+      spectating: !!b.spec,
       me: { ...b.me, x: lerp(a.me.x, b.me.x, k), y: lerp(a.me.y, b.me.y, k) },
       zoom: lerp(a.z, b.z, k),
       players,

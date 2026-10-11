@@ -8,6 +8,7 @@ await loadLadder();
 const $ = (id) => document.getElementById(id);
 const joinEl = $('join'), deadEl = $('dead');
 const form = $('join-form'), nameEl = $('name'), statusEl = $('join-status');
+const joinButton = form.querySelector('button');
 
 const state = new State();
 const hud = new Hud();
@@ -17,6 +18,8 @@ let playing = false;
 let playerName = '';
 
 // ---------- networking ----------
+// The page connects straight away and spectates the leader, so the live universe is visible
+// behind the name screen; "join" turns the same connection into a player.
 function wsUrl() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${proto}//${location.host}/ws`;
@@ -33,7 +36,11 @@ function viewSize() {
 function connect() {
   return new Promise((resolve, reject) => {
     ws = new WebSocket(wsUrl());
-    ws.onopen = () => resolve();
+    ws.onopen = () => {
+      send({ t: 'view', ...viewSize() });
+      send({ t: 'spectate' });
+      resolve();
+    };
     ws.onerror = () => reject(new Error('Could not reach the server'));
     ws.onmessage = (ev) => onMessage(JSON.parse(ev.data));
     ws.onclose = () => {
@@ -44,34 +51,41 @@ function connect() {
       joinEl.hidden = false;
       statusEl.textContent = 'Disconnected from the server. Press Confirm to rejoin.';
       if (renderer) { renderer.app.destroy(true, { children: true }); renderer = null; }
-      $('join-form').querySelector('button').disabled = false;
+      state.foodQueue = [];
+      state.clearMotion();
+      joinButton.disabled = false;
     };
   });
 }
 
 async function onMessage(msg) {
   switch (msg.t) {
-    case 'welcome':
+    case 'hello':
+      setStartMass(msg.startMass);
       if (!renderer) {
         renderer = new Renderer();
         await renderer.init($('stage'), msg.world);
         renderer.foodR = msg.foodR;
+        renderer.ready = true;
       }
-      setStartMass(msg.startMass);
+      break;
+    case 'welcome':
       state.clearMotion();
       hud.reset();
       playing = true;
       joinEl.hidden = true;
       deadEl.hidden = true;
+      joinButton.disabled = false;
       hud.show(true);
       break;
     case 's':
       state.push(msg);
-      if (msg.lb) hud.leaderboard(msg.lb, msg.rank, msg.me.id);
+      if (msg.lb && playing) hud.leaderboard(msg.lb, msg.rank, msg.me.id);
       break;
     case 'dead':
       playing = false;
       hud.show(false);
+      state.clearMotion();   // the camera switches to the leader
       $('dead-msg').textContent =
         `${msg.by} swallowed you at ${Math.round(msg.mass)} mass. ` +
         `Best level reached: ${LEVELS[msg.best].name}.`;
@@ -85,30 +99,20 @@ async function onMessage(msg) {
 form.addEventListener('submit', async (ev) => {
   ev.preventDefault();
   playerName = nameEl.value.trim();
-  const button = form.querySelector('button');
-  button.disabled = true;
+  joinButton.disabled = true;
   statusEl.textContent = '';
   try {
     if (!ws) {
       statusEl.textContent = 'Connecting…';
       await connect();
-      // a fresh connection starts with no food known on either side
-      state.foodQueue = [];
     }
     send({ t: 'join', name: playerName, ...viewSize() });
     statusEl.textContent = '';
   } catch (err) {
     statusEl.textContent = err.message;
-    button.disabled = false;
+    joinButton.disabled = false;
   }
 });
-
-// ?name=Foo pre-fills the name and joins straight away (handy for testing)
-const preset = new URLSearchParams(location.search).get('name');
-if (preset) {
-  nameEl.value = preset;
-  form.requestSubmit();
-}
 
 $('again').addEventListener('click', () => {
   send({ t: 'join', name: playerName, ...viewSize() });
@@ -141,14 +145,29 @@ function frame() {
   const nowMs = performance.now();
   const dt = Math.min(0.1, (nowMs - lastFrame) / 1000);
   lastFrame = nowMs;
-  if (!renderer) return;
+  if (!renderer?.ready) return;
   const t = state.renderTime();
   for (const upd of state.dueFood(t)) renderer.applyFood(upd);
   renderer.updateFood(dt);
-  if (!playing) return;
   const view = state.sample(t);
   if (!view) return;
-  renderer.draw(view);
-  hud.update(view.me);
+  renderer.draw(view, dt);
+  if (playing && !view.spectating) hud.update(view.me);
 }
 requestAnimationFrame(frame);
+
+// ?name=Foo pre-fills the name and joins straight away (handy for testing)
+// ?watch=1 hides the menu and just follows the leader (screenshots, a classroom screen)
+const params = new URLSearchParams(location.search);
+const preset = params.get('name');
+if (params.has('watch')) joinEl.hidden = true;
+
+// connect immediately so the menu shows the live game behind it
+connect()
+  .then(() => {
+    if (preset) {
+      nameEl.value = preset;
+      form.requestSubmit();
+    }
+  })
+  .catch((err) => { statusEl.textContent = err.message; });

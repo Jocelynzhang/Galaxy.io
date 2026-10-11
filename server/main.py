@@ -5,7 +5,9 @@ Protocol (JSON text frames):
     {"t": "join", "name": str, "vw": px, "vh": px}
     {"t": "in", "a": radians, "th": 0..1, "b": 0|1}
     {"t": "view", "vw": px, "vh": px}
+    {"t": "spectate"}   watch the leader without playing (menus, death screen)
   server -> client
+    {"t": "hello", "world": [w, h], "foodR": float, "startMass": float}   on connect
     {"t": "welcome", "id": int, "world": [w, h], "foodR": float, "tickHz": int, "startMass": float}
     {"t": "s", ...}  snapshot, see World.snapshot_for (includes "lb" leaderboard about once a second)
     {"t": "dead", "by": name, "mass": float, "best": level index}
@@ -44,6 +46,7 @@ class Session:
     def __init__(self, ws: WebSocket):
         self.ws = ws
         self.player_id: int | None = None
+        self.spectating = False
         self.vw, self.vh = 1280.0, 720.0
         self.known_food: dict[int, int] = {}
         self._important: deque[str] = deque()
@@ -52,7 +55,7 @@ class Session:
 
     @property
     def ready_for_snapshot(self) -> bool:
-        return self.player_id is not None and self._snapshot is None
+        return (self.player_id is not None or self.spectating) and self._snapshot is None
 
     def send(self, msg: dict) -> None:
         self._important.append(json.dumps(msg, separators=(",", ":")))
@@ -93,6 +96,7 @@ class Game:
         s.set_view(msg)
         p = self.world.add_player(clean_name(msg.get("name")))
         s.player_id = p.id
+        s.spectating = False
         self.by_player[p.id] = s
         s.send({"t": "welcome", "id": p.id, "world": [C.WORLD_W, C.WORLD_H],
                 "foodR": C.FOOD_RADIUS, "tickHz": C.TICK_HZ, "startMass": C.START_MASS})
@@ -112,6 +116,8 @@ class Game:
             self.join(s, msg)
         elif kind == "view":
             s.set_view(msg)
+        elif kind == "spectate" and s.player_id is None:
+            s.spectating = True
 
     async def run(self) -> None:
         dt = 1.0 / C.TICK_HZ
@@ -122,15 +128,25 @@ class Game:
                 s = self.by_player.pop(d.victim_id, None)
                 if s is not None:
                     s.player_id = None
+                    s.spectating = True
                     s.send({"t": "dead", "by": d.killer_name, "mass": round(d.mass, 1), "best": d.best_level})
             if self.world.tick % C.SNAPSHOT_EVERY == 0:
                 # the leaderboard rides along about once a second
-                board = self.world.leaderboard() if self.world.tick % C.LEADERBOARD_EVERY == 0 else None
+                lb_tick = self.world.tick % C.LEADERBOARD_EVERY == 0
+                ranked = self.world.leaderboard()
                 for s in self.sessions:
-                    if s.ready_for_snapshot:
-                        snap = self.world.snapshot_for(s.player_id, s.vw, s.vh, s.known_food, board)
-                        snap["ts"] = round(time.perf_counter(), 4)
-                        s.send_snapshot(snap)
+                    if not s.ready_for_snapshot:
+                        continue
+                    if s.player_id is not None:
+                        snap = self.world.snapshot_for(s.player_id, s.vw, s.vh, s.known_food,
+                                                       ranked if lb_tick else None)
+                    elif ranked:   # spectators watch the current leader
+                        snap = self.world.snapshot_for(ranked[0].id, s.vw, s.vh, s.known_food,
+                                                       ranked if lb_tick else None, spectating=True)
+                    else:
+                        continue
+                    snap["ts"] = round(time.perf_counter(), 4)
+                    s.send_snapshot(snap)
             next_t += dt
             delay = next_t - time.perf_counter()
             if delay < -0.25:          # fell far behind (e.g. laptop slept): resync instead of bursting
@@ -158,6 +174,7 @@ async def ws_endpoint(ws: WebSocket):
     s = Session(ws)
     game.sessions.add(s)
     writer = asyncio.create_task(s.writer())
+    s.send({"t": "hello", "world": [C.WORLD_W, C.WORLD_H], "foodR": C.FOOD_RADIUS, "startMass": C.START_MASS})
     try:
         while True:
             raw = await ws.receive_text()

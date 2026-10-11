@@ -59,6 +59,8 @@ def test_snapshot_reports_real_mass_and_leaderboard():
     w = World(seed=1)
     a, b, c = (w.add_player(n) for n in "abc")
     a.mass, b.mass, c.mass = 50, 500, 5
+    for p in (a, b, c):
+        p.level = level_index(p.mass)
     board = w.leaderboard()
     snap = w.snapshot_for(a.id, 1280, 720, {}, board)
     assert snap["rank"] == 2

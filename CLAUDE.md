@@ -90,6 +90,20 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - Name filter in `server/game/names.py` (substring list + whole-word list + allowlist for
   Scunthorpe-style false positives). Bad names become "Stardust".
 
+**2026-10-11** (M4)
+- Level hysteresis (product owner request): level up at the threshold, level down only after
+  falling `LEVEL_DOWN_MARGIN` (8%) below it, so boosting near a threshold doesn't flicker.
+  The server owns each player's `level`; everything (decay, gravity, HUD, visuals) uses it.
+- Visuals are all procedural: Canvas-2D painted textures (`client/js/objects/art.js`), a sphere
+  shader for planets/stars (`sphere.js`), sprites for the rest (`bodies.js`). Variants per player id:
+  Earth/Mars/Venus, Jupiter/Saturn/Neptune, Pluto/Ceres. Star colour follows mass (red→blue).
+- Background: one full-screen shader draws a starfield + grid bent by the point-lens equation
+  (`background.js`); Einstein radius per level in `LENS_K` (render.js). Shaders avoid `fwidth`
+  so they compile on WebGL1 too (headless Chrome fell back to WebGL1).
+- Effects: boost exhaust, level-up sparkle, supernova (giant→neutron), collapse (neutron→black hole).
+- The menu spectates the leader live (attract mode); `?watch=1` hides the menu (classroom screen).
+- Dev gallery of every object: http://localhost:8000/dev/gallery.html (`?boost=1`, `?fx=supernova`).
+
 ## Science ladder (real-mass ranges shown in the HUD, log-mapped within each level)
 | # | Level | Real mass | Fact-card examples |
 |---|---|---|---|
@@ -111,7 +125,7 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - [x] **M1 Skeleton:** FastAPI + WS, name screen, mouse steering, food, eating, big world + camera
 - [x] **M2 Mechanics:** speed curve, boost + ejecta, food gravity, decay, ladder, death screen, NPCs
 - [x] **M3 HUD + science:** leaderboard, progress bar, real-mass readout, fact cards, name filter
-- [ ] **M4 Visuals:** lensing grid shader, boost particles, 12 animations, supernova
+- [x] **M4 Visuals:** lensing grid shader, boost particles, 12 animations, supernova
 - [ ] **M5 Deploy:** Dockerfile, host, HTTPS/wss, rate limits, internet play-test
 - Later: touch controls, sound, optional accounts or high scores, multiple rooms
 
@@ -126,6 +140,7 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
   `python tools/playtest.py <out_dir> [seconds]` (server must be running on :8000)
 - Evaluate client JS in the page (no Node needed): `python tools/jseval.py "import('/js/realmass.js').then(m => m.formatRealMass(24.8))"`
 - WebSocket load test: `python tools/loadtest.py [bots] [seconds]` (snapshot rate + KB/s per client)
+- Object gallery: http://localhost:8000/dev/gallery.html · spectator view: http://localhost:8000/?watch=1
 - Headless screenshot (no browser extension needed):
   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --user-data-dir=<tmp> --window-size=1280,720 --virtual-time-budget=6000 --screenshot=out.png "http://127.0.0.1:8000/?name=TQ"`
   (Chrome may not exit after the shot; wrap it in `perl -e 'alarm 45; exec @ARGV'` and kill the profile's process.)

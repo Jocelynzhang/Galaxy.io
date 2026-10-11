@@ -34,6 +34,17 @@ def level_index(mass: float) -> int:
     return idx
 
 
+def settle_level(current: int, mass: float) -> int:
+    """Level after a mass change, with hysteresis: go up as soon as a threshold is reached, but
+    only go down once mass falls LEVEL_DOWN_MARGIN below the current level's threshold."""
+    lvl = current
+    while lvl + 1 < len(LEVELS) and mass >= LEVELS[lvl + 1].min_mass:
+        lvl += 1
+    while lvl > 0 and mass < LEVELS[lvl].min_mass * (1 - C.LEVEL_DOWN_MARGIN):
+        lvl -= 1
+    return lvl
+
+
 def level_span(i: int) -> tuple[float, float]:
     """Game-mass range [start, end) of level i. Dust starts at START_MASS (nobody is smaller)
     and the last level ends at TOP_MASS."""
@@ -42,9 +53,10 @@ def level_span(i: int) -> tuple[float, float]:
     return start, end
 
 
-def real_mass_kg(mass: float) -> float:
-    """Map game mass to a real mass in kg, log-linearly within the current level's real range."""
-    i = level_index(mass)
+def real_mass_kg(mass: float, level: int | None = None) -> float:
+    """Map game mass to a real mass in kg, log-linearly within the level's real range.
+    `level` is the player's (hysteresis) level; below its threshold the bottom of its range is shown."""
+    i = level_index(mass) if level is None else level
     lo, hi = level_span(i)
     t = (math.log(max(mass, lo)) - math.log(lo)) / (math.log(hi) - math.log(lo))
     k_lo, k_hi = LEVELS[i].real_kg
