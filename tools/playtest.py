@@ -1,4 +1,4 @@
-"""Play Galaxy.io in headless Chrome via the DevTools protocol: steer toward food, boost, screenshot.
+"""Play Universe IO in headless Chrome via the DevTools protocol: steer toward food, boost, screenshot.
 
 usage: python playtest.py <out_dir> [seconds] [base_url]
 """

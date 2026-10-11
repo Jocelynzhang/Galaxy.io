@@ -3,7 +3,7 @@
 # and is the only way in from the internet).
 #   GALAXY_PYTHON           python with requirements.txt installed (default: python on PATH)
 #   GALAXY_PORT             default 8000
-#   GALAXY_ALLOWED_ORIGINS  e.g. "https://galaxyio.fun,https://www.galaxyio.fun"
+#   GALAXY_ALLOWED_ORIGINS  e.g. "https://universe-io.fun,https://www.universe-io.fun"
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PY="${GALAXY_PYTHON:-python}"

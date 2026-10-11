@@ -15,7 +15,7 @@ Protocol (JSON text frames):
 
 Public-hosting safeguards: per-IP and total connection caps, a human-player cap, a per-connection
 message rate limit, a join cooldown, an Origin check, and a game loop that survives exceptions.
-Env: GALAXY_ALLOWED_ORIGINS="https://galaxyio.fun,https://www.galaxyio.fun" (default: same host).
+Env: GALAXY_ALLOWED_ORIGINS="https://universe-io.fun,https://www.universe-io.fun" (default: same host).
 """
 import asyncio
 import json
@@ -38,7 +38,7 @@ from .game.npc import NpcManager
 from .game.world import World
 
 CLIENT_DIR = Path(__file__).resolve().parent.parent / "client"
-log = logging.getLogger("galaxyio")
+log = logging.getLogger("universe-io")
 ALLOWED_ORIGINS = {o.strip().rstrip("/") for o in os.environ.get("GALAXY_ALLOWED_ORIGINS", "").split(",") if o.strip()}
 TRUSTED_PROXIES = {"127.0.0.1", "::1"}   # cloudflared / a reverse proxy on the same machine
 

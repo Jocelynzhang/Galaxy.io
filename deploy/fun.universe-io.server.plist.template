@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- macOS LaunchAgent: starts the Galaxy.io server at login and restarts it if it stops.
+<!-- macOS LaunchAgent: starts the Universe IO server at login and restarts it if it stops.
      Filled in and installed by deploy/install_mac_service.sh. -->
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>fun.galaxyio.server</string>
+  <string>fun.universe-io.server</string>
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>

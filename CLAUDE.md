@@ -1,4 +1,6 @@
-# Galaxy.io: project memory
+# Universe IO: project memory
+
+Renamed from Galaxy.io on 2026-10-11 (repo, conda env and `GALAXY_*` env vars keep the old name).
 
 ## Vision
 A browser IO game that teaches kids about the objects in the universe. You start as a speck of
@@ -105,7 +107,7 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - Dev gallery of every object: http://localhost:8000/dev/gallery.html (`?boost=1`, `?fx=supernova`).
 
 **2026-10-11** (M5)
-- Hosting: the product owner's **Mac Studio** at **galaxyio.fun** via **Cloudflare Tunnel** (no port
+- Hosting: the product owner's **Mac Studio** at **galaxyio.fun** (now universe-io.fun, see below) via **Cloudflare Tunnel** (no port
   forwarding, home IP hidden, automatic HTTPS). The server runs as a launchd LaunchAgent
   (`deploy/install_mac_service.sh`), `cloudflared service install` for the tunnel. Docker dropped
   (not needed on a single Mac). Full steps: `deploy/DEPLOY.md`.
@@ -114,6 +116,14 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
   crash-safe game loop, `/healthz`. Real IP from `CF-Connecting-IP` when the peer is localhost.
 - Verified on the laptop with a quick tunnel (`cloudflared tunnel --url http://127.0.0.1:8000`):
   played through the public HTTPS URL in Chrome.
+
+**2026-10-11** (rename + go-live)
+- Product name is now **Universe IO**; domain **universe-io.fun** (replaces galaxyio.fun). Launchd label
+  `fun.universe-io.server`, logs `~/Library/Logs/universe-io/`, tunnel name `universe-io`.
+- Claude runs the production server on this Mac. The service runs from a separate checkout at
+  `~/universe-io` (deploy with `git pull` there): macOS privacy protection (TCC) blocks launchd from
+  reading `~/Documents`, where the dev checkout lives.
+- conda: use `--override-channels -c conda-forge` (the Anaconda default channels need a ToS acceptance).
 
 ## Science ladder (real-mass ranges shown in the HUD, log-mapped within each level)
 | # | Level | Real mass | Fact-card examples |

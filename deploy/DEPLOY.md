@@ -1,8 +1,8 @@
-# Hosting Galaxy.io on a Mac (galaxyio.fun)
+# Hosting Universe IO on a Mac (universe-io.fun)
 
 The game is one Python process listening on `127.0.0.1:8000`. A **Cloudflare Tunnel**
 (`cloudflared`) makes an outgoing connection to Cloudflare, and Cloudflare serves
-`https://galaxyio.fun` (HTTPS + WebSockets) through it. Why a tunnel:
+`https://universe-io.fun` (HTTPS + WebSockets) through it. Why a tunnel:
 
 - no router port-forwarding, and your home IP address stays hidden
 - HTTPS certificates are automatic
@@ -10,7 +10,7 @@ The game is one Python process listening on `127.0.0.1:8000`. A **Cloudflare Tun
 - free
 
 ```
-kid's browser ──https/wss──▶ Cloudflare ◀──tunnel── cloudflared ──▶ 127.0.0.1:8000 (Galaxy.io)
+kid's browser ──https/wss──▶ Cloudflare ◀──tunnel── cloudflared ──▶ 127.0.0.1:8000 (Universe IO)
                                                      └──────── your Mac Studio ────────┘
 ```
 
@@ -30,19 +30,21 @@ The random URL works from any phone or computer until you stop `cloudflared`.
    (Users & Groups) so the services start after a reboot without anyone logging in.
 2. **Get the code and Python 3.11:**
    ```bash
-   git clone git@github.com:Jocelynzhang/Galaxy.io.git ~/Galaxy.io && cd ~/Galaxy.io
-   conda create -n galaxyio -c conda-forge python=3.11 pip      # or: python3.11 -m venv .venv
+   git clone git@github.com:Jocelynzhang/Galaxy.io.git ~/universe-io && cd ~/universe-io
+   conda create -n galaxyio --override-channels -c conda-forge python=3.11 pip      # or: python3.11 -m venv .venv
    conda activate galaxyio && pip install -r requirements.txt
    ```
+   Keep this checkout **outside** `~/Documents`, `~/Desktop` and `~/Downloads`: macOS privacy
+   protection stops background services from reading those folders ("Operation not permitted").
 3. **Install the game server as a background service** (starts at login, restarts if it stops):
    ```bash
-   deploy/install_mac_service.sh "$(which python)" "https://galaxyio.fun,https://www.galaxyio.fun"
+   deploy/install_mac_service.sh "$(which python)" "https://universe-io.fun,https://www.universe-io.fun"
    ```
-   It prints the `/healthz` result when it's up. Logs: `~/Library/Logs/galaxyio/server.log`.
+   It prints the `/healthz` result when it's up. Logs: `~/Library/Logs/universe-io/server.log`.
 
 ## 2. Domain + tunnel (once)
 
-1. **Buy `galaxyio.fun`** at any registrar (Cloudflare Registrar, Porkbun, Namecheap…).
+1. **Buy `universe-io.fun`** at any registrar (Cloudflare Registrar, Porkbun, Namecheap…).
 2. **Add it to Cloudflare** (free plan): dash.cloudflare.com → *Add a domain*. If you bought it
    elsewhere, change the registrar's nameservers to the two Cloudflare gives you. Wait until
    Cloudflare says the domain is *Active*.
@@ -50,12 +52,12 @@ The random URL works from any phone or computer until you stop `cloudflared`.
    from https://github.com/cloudflare/cloudflared/releases.
 4. **Create the tunnel:**
    ```bash
-   cloudflared tunnel login                       # opens a browser: pick galaxyio.fun
-   cloudflared tunnel create galaxyio             # prints the tunnel ID, writes ~/.cloudflared/<ID>.json
+   cloudflared tunnel login                       # opens a browser: pick universe-io.fun
+   cloudflared tunnel create universe-io          # prints the tunnel ID, writes ~/.cloudflared/<ID>.json
    cp deploy/cloudflared-config.example.yml ~/.cloudflared/config.yml   # then fill in <TUNNEL-ID> and <you>
-   cloudflared tunnel route dns galaxyio galaxyio.fun
-   cloudflared tunnel route dns galaxyio www.galaxyio.fun
-   cloudflared tunnel run galaxyio                # test: open https://galaxyio.fun
+   cloudflared tunnel route dns universe-io universe-io.fun
+   cloudflared tunnel route dns universe-io www.universe-io.fun
+   cloudflared tunnel run universe-io             # test: open https://universe-io.fun
    ```
 5. **Run the tunnel as a service** (Ctrl+C the test run first):
    ```bash
@@ -67,11 +69,11 @@ The random URL works from any phone or computer until you stop `cloudflared`.
 
 | Task | Command |
 |---|---|
-| Is it up? | `curl https://galaxyio.fun/healthz` → `{"ok":true, "humans":…, "tick_ms":…}` |
-| Update to the latest code | `cd ~/Galaxy.io && git pull && launchctl kickstart -k gui/$(id -u)/fun.galaxyio.server` |
-| Restart the server | `launchctl kickstart -k gui/$(id -u)/fun.galaxyio.server` |
-| Stop the server | `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/fun.galaxyio.server.plist` |
-| Server logs | `tail -f ~/Library/Logs/galaxyio/server.log` |
+| Is it up? | `curl https://universe-io.fun/healthz` → `{"ok":true, "humans":…, "tick_ms":…}` |
+| Update to the latest code | `cd ~/universe-io && git pull && launchctl kickstart -k gui/$(id -u)/fun.universe-io.server` |
+| Restart the server | `launchctl kickstart -k gui/$(id -u)/fun.universe-io.server` |
+| Stop the server | `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/fun.universe-io.server.plist` |
+| Server logs | `tail -f ~/Library/Logs/universe-io/server.log` |
 
 ## Built-in safeguards (server/game/config.py)
 
