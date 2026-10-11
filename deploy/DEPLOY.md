@@ -63,6 +63,15 @@ The random URL works from any phone or computer until you stop `cloudflared`.
    ```bash
    cloudflared service install                    # LaunchAgent that reads ~/.cloudflared/config.yml
    ```
+   The installer (2026.10) writes a plist that runs bare `cloudflared` and exits at once. Add the
+   arguments and keep it alive:
+   ```bash
+   P=~/Library/LaunchAgents/com.cloudflare.cloudflared.plist
+   launchctl bootout gui/$(id -u) $P
+   /usr/libexec/PlistBuddy -c "Add :ProgramArguments: string tunnel" -c "Add :ProgramArguments: string run" \
+     -c "Add :ProgramArguments: string universe-io" -c "Delete :KeepAlive" -c "Add :KeepAlive bool true" $P
+   launchctl bootstrap gui/$(id -u) $P      # logs: ~/Library/Logs/com.cloudflare.cloudflared.err.log
+   ```
 6. Optional, in the Cloudflare dashboard: SSL/TLS → Edge Certificates → *Always Use HTTPS* = on.
 
 ## 3. Day to day
