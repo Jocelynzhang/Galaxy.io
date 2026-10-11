@@ -18,10 +18,10 @@ LEVELS = [
     Level("brown_dwarf", "Brown dwarf", 500),
     Level("main_sequence", "Main-sequence star", 900),
     Level("giant", "Giant star", 1600),
-    Level("neutron_star", "Neutron star", 2800),
-    Level("black_hole", "Black hole", 4500),
-    Level("quasar", "Quasar", 7500),
-    Level("galaxy", "Galaxy", 12000),
+    Level("neutron_star", "Neutron star", 2600),
+    Level("black_hole", "Black hole", 3800),
+    Level("quasar", "Quasar", 5500),
+    Level("galaxy", "Galaxy", 8000),
 ]
 
 

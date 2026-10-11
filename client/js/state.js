@@ -23,7 +23,7 @@ export class State {
   push(snap) {
     const sample = snap.ts - now();
     this.offset = this.offset === null ? sample : this.offset + (sample - this.offset) * 0.1;
-    snap.players = new Map(snap.p.map(([id, x, y, r, lvl, name, bot]) => [id, { id, x, y, r, lvl, name, bot }]));
+    snap.players = new Map(snap.p.map(([id, x, y, r, lvl, name, bot, boost]) => [id, { id, x, y, r, lvl, name, bot, boost }]));
     this.snaps.push(snap);
     this.latest = snap;
     if (snap.f.length || snap.fr.length) this.foodQueue.push({ ts: snap.ts, add: snap.f, remove: snap.fr });

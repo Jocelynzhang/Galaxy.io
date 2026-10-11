@@ -15,3 +15,10 @@ export const LEVELS = [
 ];
 
 export const FOOD_PALETTE = [0x70b7db, 0x9e89d6, 0xb2c76f, 0xf2a7c3, 0xffd98a, 0x8fe3c8];
+
+// Food color codes >= EJECTA_COLOR_BASE are boost exhaust, tinted by the booster's level.
+const EJECTA_COLOR_BASE = 100;
+export function foodColor(c) {
+  if (c >= EJECTA_COLOR_BASE) return LEVELS[Math.min(c - EJECTA_COLOR_BASE, LEVELS.length - 1)].color;
+  return FOOD_PALETTE[c % FOOD_PALETTE.length];
+}

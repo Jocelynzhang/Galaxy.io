@@ -67,6 +67,18 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 | Boost | Hold left mouse; ~2× speed; mass streams out as edible particles; dust can't boost |
 | Workflow | Branch + PR per milestone, each with a local playable demo |
 
+**2026-10-11** (M2 tuning, from `python -m server.sim`)
+- Game-mass thresholds: dust 0, asteroid 25, dwarf planet 60, terrestrial 130, gas giant 260,
+  brown dwarf 500, main-sequence 900, giant 1600, neutron star 2600, black hole 3800, quasar 5500,
+  galaxy 8000. Top levels are close together because late growth comes from eating big NPCs.
+- Mass decay per level (`DECAY` table): only main-sequence and up; galaxy 0.16 %/s.
+- NPCs use fixed "slots" (`NPC_SLOTS`), each with a max level and personality. Above its cap an
+  NPC sheds mass quickly. This keeps a stable mix of sizes, so kids joining late are not surrounded
+  by galaxies, and leaves the top of the leaderboard to humans. 2 of 10 slots are hunters.
+- Sim result: skilled pilot reaches galaxy in ~10–15 min in 3 of 4 seeds; tick ≈ 0.6 ms.
+- Workflow: Claude opens a PR per milestone and merges it when tests pass; the product owner
+  play-tests on master and sends feedback.
+
 ## Science ladder (real-mass ranges shown in the HUD, log-mapped within each level)
 | # | Level | Real mass | Fact-card examples |
 |---|---|---|---|
@@ -86,7 +98,7 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 ## Milestones
 - [x] **M0 Bootstrap:** CLAUDE.md, legacy/ move, requirements, .gitignore
 - [x] **M1 Skeleton:** FastAPI + WS, name screen, mouse steering, food, eating, big world + camera
-- [ ] **M2 Mechanics:** speed curve, boost + ejecta, food gravity, decay, ladder, death screen, NPCs
+- [x] **M2 Mechanics:** speed curve, boost + ejecta, food gravity, decay, ladder, death screen, NPCs
 - [ ] **M3 HUD + science:** leaderboard, progress bar, real-mass readout, fact cards, name filter
 - [ ] **M4 Visuals:** lensing grid shader, boost particles, 12 animations, supernova
 - [ ] **M5 Deploy:** Dockerfile, host, HTTPS/wss, rate limits, internet play-test
@@ -94,8 +106,10 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 
 ## Commands
 - Environment: `conda activate galaxyio` (Python 3.11), then `pip install -r requirements-dev.txt`
-- Run server: `uvicorn server.main:app --reload --port 8000`, then open http://localhost:8000
+- Run server: `uvicorn server.main:app --reload --reload-dir server --port 8000`
+  (`--reload-dir server` matters: watching the whole repo hung the reloader on branch switches), then open http://localhost:8000
 - Tests: `pytest server/tests`
+- Pacing sim: `python -m server.sim [minutes] [pilots] [seed]` (time to each level, size mix, tick cost)
 - Auto-join for testing: http://localhost:8000/?name=TQ
 - Headless screenshot (no browser extension needed):
   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --user-data-dir=<tmp> --window-size=1280,720 --virtual-time-budget=6000 --screenshot=out.png "http://127.0.0.1:8000/?name=TQ"`

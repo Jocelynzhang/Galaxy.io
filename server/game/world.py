@@ -31,14 +31,24 @@ class FoodGrid:
             if not bucket:
                 del self.cells[key]
 
-    def query_rect(self, x0: float, y0: float, x1: float, y1: float):
+    def move(self, f: Food, x: float, y: float) -> None:
+        if self._key(f.x, f.y) != self._key(x, y):
+            self.remove(f)
+            f.x, f.y = x, y
+            self.add(f)
+        else:
+            f.x, f.y = x, y
+
+    def query_rect(self, x0: float, y0: float, x1: float, y1: float) -> list[int]:
         cx0, cy0 = self._key(x0, y0)
         cx1, cy1 = self._key(x1, y1)
+        out: list[int] = []
         for cx in range(cx0, cx1 + 1):
             for cy in range(cy0, cy1 + 1):
                 bucket = self.cells.get((cx, cy))
                 if bucket:
-                    yield from bucket
+                    out.extend(bucket)
+        return out
 
 
 @dataclass
@@ -55,6 +65,8 @@ class World:
         self.tick = 0
         self.players: dict[int, Player] = {}
         self.food: dict[int, Food] = {}
+        self.natural_food = 0            # food count excluding boost ejecta
+        self.flying: set[int] = set()    # food ids that still have velocity
         self.grid = FoodGrid()
         self.best_level: dict[int, int] = {}
         self._ids = itertools.count(1)
@@ -63,11 +75,11 @@ class World:
             self._spawn_food()
 
     # ---------- players ----------
-    def add_player(self, name: str, is_bot: bool = False) -> Player:
-        x, y = self._free_spot(radius_for(C.START_MASS))
-        p = Player(id=next(self._ids), name=name, x=x, y=y, is_bot=is_bot)
+    def add_player(self, name: str, is_bot: bool = False, mass: float = C.START_MASS) -> Player:
+        x, y = self._free_spot(radius_for(mass))
+        p = Player(id=next(self._ids), name=name, x=x, y=y, mass=mass, is_bot=is_bot)
         self.players[p.id] = p
-        self.best_level[p.id] = 0
+        self.best_level[p.id] = level_index(mass)
         return p
 
     def remove_player(self, pid: int) -> None:
@@ -92,26 +104,52 @@ class World:
         return x, y
 
     # ---------- food ----------
+    def _add_food(self, f: Food) -> None:
+        self.food[f.id] = f
+        self.grid.add(f)
+        if f.owner:
+            self.flying.add(f.id)
+        else:
+            self.natural_food += 1
+
     def _spawn_food(self) -> None:
-        f = Food(
+        self._add_food(Food(
             id=next(self._food_ids),
             x=self.rng.uniform(0, C.WORLD_W),
             y=self.rng.uniform(0, C.WORLD_H),
             color=self.rng.randrange(C.FOOD_COLORS),
             moved_tick=self.tick,
-        )
-        self.food[f.id] = f
-        self.grid.add(f)
+        ))
 
     def _remove_food(self, fid: int) -> None:
         f = self.food.pop(fid)
         self.grid.remove(f)
+        self.flying.discard(fid)
+        if not f.owner:
+            self.natural_food -= 1
+
+    def _eject(self, p: Player, mass: float) -> None:
+        """Shoot a pellet of `mass` out of the back of `p`."""
+        a = p.angle + math.pi + self.rng.uniform(-C.EJECTA_SPREAD, C.EJECTA_SPREAD)
+        ca, sa = math.cos(a), math.sin(a)
+        f = Food(id=next(self._food_ids), x=0, y=0, mass=mass,
+                 color=C.EJECTA_COLOR_BASE + level_index(p.mass), moved_tick=self.tick, owner=p.id,
+                 edible_tick=self.tick + round(C.EJECTA_ARM_S * C.TICK_HZ),
+                 owner_edible_tick=self.tick + round(C.EJECTA_OWNER_ARM_S * C.TICK_HZ))
+        dist = p.radius + f.radius + 2
+        f.x = min(C.WORLD_W, max(0.0, p.x + ca * dist))
+        f.y = min(C.WORLD_H, max(0.0, p.y + sa * dist))
+        speed = C.EJECTA_SPEED * self.rng.uniform(0.8, 1.1)
+        f.vx, f.vy = ca * speed, sa * speed
+        self._add_food(f)
 
     # ---------- simulation ----------
     def step(self, dt: float) -> list[Death]:
         self.tick += 1
         for p in self.players.values():
             self._move(p, dt)
+            self._decay(p, dt)
+        self._move_food(dt)
         for p in self.players.values():
             self._eat_food(p)
         deaths = self._eat_players()
@@ -119,13 +157,23 @@ class World:
             lvl = level_index(p.mass)
             if lvl > self.best_level[p.id]:
                 self.best_level[p.id] = lvl
-        missing = C.FOOD_TARGET - len(self.food)
+        missing = C.FOOD_TARGET - self.natural_food
         for _ in range(min(missing, C.FOOD_SPAWN_PER_TICK)):
             self._spawn_food()
         return deaths
 
     def _move(self, p: Player, dt: float) -> None:
         v = speed_for(p.mass) * p.throttle
+        p.boosting = p.boost and p.throttle > 0.1 and p.mass >= C.BOOST_MIN_MASS
+        if p.boosting:
+            v *= C.BOOST_MULT
+            loss = C.BOOST_LOSS_FRAC * p.mass * dt
+            p.mass -= loss
+            p.boost_debt += loss
+            pellet = min(C.EJECTA_MASS_MAX, max(C.EJECTA_MASS_MIN, p.mass * C.EJECTA_MASS_FRAC))
+            while p.boost_debt >= pellet:
+                p.boost_debt -= pellet
+                self._eject(p, pellet)
         tvx, tvy = math.cos(p.angle) * v, math.sin(p.angle) * v
         k = min(1.0, C.ACCEL * dt)
         p.vx += (tvx - p.vx) * k
@@ -134,12 +182,55 @@ class World:
         p.x = min(C.WORLD_W - r, max(r, p.x + p.vx * dt))
         p.y = min(C.WORLD_H - r, max(r, p.y + p.vy * dt))
 
+    def _decay(self, p: Player, dt: float) -> None:
+        p.mass -= p.mass * C.DECAY[level_index(p.mass)] * dt
+
+    def _move_food(self, dt: float) -> None:
+        moves: dict[int, tuple[float, float]] = {}
+        # flying ejecta coast and slow down
+        drag = math.exp(-C.EJECTA_DRAG * dt)
+        for fid in list(self.flying):
+            f = self.food[fid]
+            f.vx *= drag
+            f.vy *= drag
+            moves[fid] = (f.x + f.vx * dt, f.y + f.vy * dt)
+            if f.vx * f.vx + f.vy * f.vy < 25:
+                f.vx = f.vy = 0.0
+                self.flying.discard(fid)
+        # gravity: big objects pull food (never players) toward themselves
+        for p in self.players.values():
+            g = C.GRAVITY[level_index(p.mass)]
+            if g <= 0:
+                continue
+            r = p.radius
+            reach = r * C.GRAVITY_REACH
+            for fid in self.grid.query_rect(p.x - reach, p.y - reach, p.x + reach, p.y + reach):
+                f = self.food[fid]
+                if f.owner == p.id and not f.edible_by(p.id, self.tick):
+                    continue  # don't suck your own exhaust straight back in
+                fx, fy = moves.get(fid, (f.x, f.y))
+                dx, dy = p.x - fx, p.y - fy
+                d = math.hypot(dx, dy)
+                if d < 1e-6 or d > reach:
+                    continue
+                step = min(C.GRAVITY_MAX_SPEED, g * (r / d) ** 2) * dt
+                step = min(step, d)
+                moves[fid] = (fx + dx / d * step, fy + dy / d * step)
+        for fid, (x, y) in moves.items():
+            f = self.food[fid]
+            x = min(C.WORLD_W, max(0.0, x))
+            y = min(C.WORLD_H, max(0.0, y))
+            if abs(x - f.x) > 0.01 or abs(y - f.y) > 0.01:
+                self.grid.move(f, x, y)
+                f.moved_tick = self.tick
+
     def _eat_food(self, p: Player) -> None:
         r = p.radius
-        eaten = [
-            fid for fid in self.grid.query_rect(p.x - r, p.y - r, p.x + r, p.y + r)
-            if math.hypot(self.food[fid].x - p.x, self.food[fid].y - p.y) < r
-        ]
+        eaten = []
+        for fid in self.grid.query_rect(p.x - r, p.y - r, p.x + r, p.y + r):
+            f = self.food[fid]
+            if math.hypot(f.x - p.x, f.y - p.y) < r and f.edible_by(p.id, self.tick):
+                eaten.append(fid)
         for fid in eaten:
             p.mass += self.food[fid].mass
             self._remove_food(fid)
@@ -174,7 +265,8 @@ class World:
         x0, y0, x1, y1 = me.x - hw, me.y - hh, me.x + hw, me.y + hh
 
         players = [
-            [p.id, round(p.x, 1), round(p.y, 1), round(p.radius, 1), level_index(p.mass), p.name, int(p.is_bot)]
+            [p.id, round(p.x, 1), round(p.y, 1), round(p.radius, 1), level_index(p.mass), p.name,
+             int(p.is_bot), int(p.boosting)]
             for p in self.players.values()
             if x0 - p.radius < p.x < x1 + p.radius and y0 - p.radius < p.y < y1 + p.radius
         ]
@@ -184,7 +276,7 @@ class World:
         for fid in visible:
             f = self.food[fid]
             if known_food.get(fid, -1) < f.moved_tick:
-                added.append([fid, round(f.x), round(f.y), f.color])
+                added.append([fid, round(f.x), round(f.y), f.color, round(f.radius, 1)])
             known_food[fid] = self.tick
         removed = [fid for fid in known_food if fid not in visible]
         for fid in removed:
@@ -194,7 +286,7 @@ class World:
             "t": "s",
             "tk": self.tick,
             "me": {"id": pid, "x": round(me.x, 1), "y": round(me.y, 1), "m": round(me.mass, 1),
-                   "lvl": level_index(me.mass)},
+                   "lvl": level_index(me.mass), "b": int(me.boosting)},
             "z": round(zoom, 4),
             "p": players,
             "f": added,
