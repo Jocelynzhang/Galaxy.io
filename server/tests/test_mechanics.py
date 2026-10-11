@@ -151,6 +151,7 @@ def test_npcs_respect_their_level_cap():
     pid, brain = next(iter(npcs.brains.items()))
     me = w.players[pid]
     me.mass = LEVELS[brain.max_level + 1].min_mass * 1.2 if brain.max_level + 1 < len(LEVELS) else me.mass
+    me.level = level_index(me.mass)
     start = me.mass
     for _ in range(60):
         npcs.update(DT)
@@ -194,3 +195,27 @@ def test_npcs_ignore_shielded_newcomers():
     for seed in range(5):
         think(w, me, Brain(hunter=True, rng=random.Random(seed)), 0.0)
         assert not (math.sin(me.angle) > 0.9), "should not beeline at a shielded kid"
+
+
+def test_level_hysteresis_up_immediately_down_only_after_margin():
+    from server.game.levels import settle_level
+    t = LEVELS[4].min_mass                     # gas giant threshold
+    assert settle_level(3, t) == 4             # level up right at the threshold
+    assert settle_level(4, t * 0.99) == 4      # a little below: stay
+    assert settle_level(4, t * (1 - C.LEVEL_DOWN_MARGIN) * 0.999) == 3
+    assert settle_level(0, LEVELS[7].min_mass) == 7   # big meals can jump several levels
+    assert settle_level(9, 10) == 0
+
+
+def test_boosting_at_a_threshold_does_not_flicker(monkeypatch):
+    freeze_food_spawning(monkeypatch)
+    w = empty_world()
+    p = w.add_player("a", mass=LEVELS[5].min_mass + 2)
+    p.x = p.y = 2000
+    w.set_input(p.id, 0.0, 1.0, True)
+    levels = []
+    for _ in range(C.TICK_HZ * 2):            # 2 s of boosting, eating its own pellets is blocked
+        w.step(DT)
+        levels.append(p.level)
+    changes = sum(1 for a, b in zip(levels, levels[1:]) if a != b)
+    assert changes <= 1 and levels[-1] == 5

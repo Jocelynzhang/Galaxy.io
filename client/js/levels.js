@@ -9,7 +9,7 @@ export function setStartMass(m) {
 }
 
 export async function loadLadder() {
-  const data = await (await fetch('data/ladder.json')).json();
+  const data = await (await fetch(new URL('../data/ladder.json', import.meta.url))).json();
   TOP_MASS = data.top_mass;
   for (const l of data.levels) {
     LEVELS.push({ ...l, css: l.color, color: parseInt(l.color.slice(1), 16) });

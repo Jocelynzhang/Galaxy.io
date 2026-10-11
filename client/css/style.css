@@ -24,7 +24,7 @@ html, body {
   inset: 0;
   display: grid;
   place-items: center;
-  background: radial-gradient(ellipse at center, rgba(40, 50, 110, 0.55), rgba(5, 8, 22, 0.85));
+  background: radial-gradient(ellipse at center, rgba(20, 26, 70, 0.25), rgba(5, 8, 22, 0.7));
   z-index: 10;
 }
 .overlay[hidden] { display: none; }
@@ -116,6 +116,8 @@ button:disabled { opacity: 0.6; cursor: wait; }
   box-shadow: 0 0 10px color-mix(in srgb, var(--c) 60%, transparent);
 }
 .lvl-icon[hidden] { display: none; }
+.lvl-icon.live { background: none !important; box-shadow: none; mask: none; border-radius: 0; }
+.lvl-icon canvas { display: block; }
 .lvl-icon[data-level="black_hole"] { background: radial-gradient(circle, #000 0 38%, #ffb35c 46%, #7a3cff 62%, transparent 72%); box-shadow: none; }
 .lvl-icon[data-level="quasar"] { background: radial-gradient(circle, #fff 0 12%, #9f7bff 30%, #2a1650 60%, transparent 72%); }
 .lvl-icon[data-level="galaxy"] { background: conic-gradient(from 0deg, #d6b8ff, #6a8cff, #d6b8ff, #6a8cff, #d6b8ff); mask: radial-gradient(circle, #000 0 30%, #000a 55%, transparent 72%); }

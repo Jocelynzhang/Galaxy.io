@@ -159,3 +159,11 @@ def test_newcomers_spawn_away_from_threats():
         gap = min(math.hypot(kid.x - p.x, kid.y - p.y) - p.radius for p in threats)
         assert gap > C.SPAWN_SAFE_DIST * 0.9
         w.remove_player(kid.id)
+
+
+def test_spectator_snapshot_is_marked_and_follows_given_player():
+    w = World(seed=1)
+    leader = w.add_player("big", mass=900)
+    snap = w.snapshot_for(leader.id, 1280, 720, {}, spectating=True)
+    assert snap["spec"] == 1 and snap["me"]["id"] == leader.id
+    assert "spec" not in w.snapshot_for(leader.id, 1280, 720, {})

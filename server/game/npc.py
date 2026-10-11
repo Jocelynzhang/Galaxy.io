@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from . import config as C
 from .entities import Player
-from .levels import LEVELS, level_index
+from .levels import LEVELS
 from .physics import can_eat
 from .world import World
 
@@ -79,7 +79,7 @@ class NpcManager:
             self.spawn_at = None
         for pid, brain in self.brains.items():
             me = self.world.players[pid]
-            if level_index(me.mass) > brain.max_level:
+            if me.level > brain.max_level:
                 me.mass -= me.mass * C.NPC_OVERCAP_DECAY * dt
             if self.time >= brain.next_think:
                 brain.next_think = self.time + brain.rng.uniform(*C.NPC_THINK_S)

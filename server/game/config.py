@@ -20,6 +20,9 @@ FOOD_COLORS = 6              # number of palette entries the client knows about
 
 # --- players ---
 START_MASS = 10.0
+# level hysteresis: you level up at a threshold, but only drop back once your mass is this
+# fraction below it, so boosting near a threshold doesn't flicker between two levels
+LEVEL_DOWN_MARGIN = 0.08
 SPAWN_SAFE_DIST = 700        # try to spawn at least this far from anything that could eat you
 SPAWN_SHIELD_S = 3.0         # newly spawned objects can't be eaten for this long
 RADIUS_K = 4.0               # radius = RADIUS_K * sqrt(mass)

@@ -10,7 +10,7 @@ import sys
 import time
 
 from .game import config as C
-from .game.levels import LEVELS, level_index
+from .game.levels import LEVELS
 from .game.npc import Brain, NpcManager, think
 from .game.world import World
 
@@ -51,13 +51,13 @@ def run(minutes: float = 15, pilots: int = 1, seed: int = 0) -> dict:
         tick_ms.append((time.perf_counter() - t0) * 1000)
         t += dt
         if world.tick % (60 * C.TICK_HZ) == 0:
-            lv = sorted(level_index(p.mass) for p in world.players.values())
+            lv = sorted(p.level for p in world.players.values())
             mix.append(f"min {round(t / 60):2d}: " + " ".join(str(x) for x in lv))
         for pid, (brain, life, born) in pilot.items():
             p = world.players.get(pid)
             if p is None:
                 continue
-            lvl = level_index(p.mass)
+            lvl = p.level
             if lvl not in life:
                 for k in range(lvl + 1):
                     life.setdefault(k, t - born)
