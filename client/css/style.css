@@ -1,0 +1,83 @@
+:root {
+  --space: #0b1026;
+  --ink: #f4f6ff;
+  --muted: #9aa5d1;
+  --accent: #ffcf5c;
+  --card: rgba(20, 26, 60, 0.92);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--space);
+  color: var(--ink);
+  font-family: "Trebuchet MS", system-ui, sans-serif;
+}
+
+#stage, #stage canvas { position: fixed; inset: 0; display: block; }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, rgba(40, 50, 110, 0.55), rgba(5, 8, 22, 0.85));
+  z-index: 10;
+}
+.overlay[hidden] { display: none; }
+
+.card {
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 32px 36px;
+  width: min(380px, calc(100vw - 32px));
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+h1 { margin: 0 0 4px; font-size: 44px; letter-spacing: 1px; }
+h1 span { color: var(--accent); }
+h2 { margin: 0 0 12px; }
+.tagline, .hint, .status { color: var(--muted); }
+.tagline { margin: 0 0 20px; }
+.hint { font-size: 13px; margin: 14px 0 0; }
+.status { min-height: 1.2em; font-size: 13px; margin: 6px 0 0; }
+
+input, button {
+  width: 100%;
+  font: inherit;
+  font-size: 18px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: none;
+}
+input {
+  background: rgba(255, 255, 255, 0.95);
+  color: #141a3a;
+  margin-bottom: 12px;
+  text-align: center;
+}
+button {
+  background: var(--accent);
+  color: #2a1d00;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.08); }
+button:disabled { opacity: 0.6; cursor: wait; }
+
+#hud {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 5;
+  pointer-events: none;
+  text-align: right;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  font-size: 18px;
+}
+#hud[hidden] { display: none; }

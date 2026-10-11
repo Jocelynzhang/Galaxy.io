@@ -84,8 +84,8 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 | 11 | Galaxy | 10⁹ – 10¹² M☉ | Milky Way |
 
 ## Milestones
-- [ ] **M0 Bootstrap:** CLAUDE.md, legacy/ move, requirements, .gitignore
-- [ ] **M1 Skeleton:** FastAPI + WS, name screen, mouse steering, food, eating, big world + camera
+- [x] **M0 Bootstrap:** CLAUDE.md, legacy/ move, requirements, .gitignore
+- [x] **M1 Skeleton:** FastAPI + WS, name screen, mouse steering, food, eating, big world + camera
 - [ ] **M2 Mechanics:** speed curve, boost + ejecta, food gravity, decay, ladder, death screen, NPCs
 - [ ] **M3 HUD + science:** leaderboard, progress bar, real-mass readout, fact cards, name filter
 - [ ] **M4 Visuals:** lensing grid shader, boost particles, 12 animations, supernova
@@ -96,6 +96,10 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - Environment: `conda activate galaxyio` (Python 3.11), then `pip install -r requirements-dev.txt`
 - Run server: `uvicorn server.main:app --reload --port 8000`, then open http://localhost:8000
 - Tests: `pytest server/tests`
+- Auto-join for testing: http://localhost:8000/?name=TQ
+- Headless screenshot (no browser extension needed):
+  `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --user-data-dir=<tmp> --window-size=1280,720 --virtual-time-budget=6000 --screenshot=out.png "http://127.0.0.1:8000/?name=TQ"`
+  (Chrome may not exit after the shot; wrap it in `perl -e 'alarm 45; exec @ARGV'` and kill the profile's process.)
 - Legacy game: `cd legacy && python server.py` and `python game.py` (needs pygame)
 
 ## Engineering conventions
