@@ -161,6 +161,10 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
   Safari turns taps into fake mouse clicks. Small screens zoom out (`viewScale`, 1 at >= 720 px) so a
   phone sees about the area a desktop does; compact HUD and touch wording on small screens.
   Tested in WebKit with iPhone portrait + landscape profiles (`tools/playtest_phone.py`).
+- Deploy gotcha: Cloudflare cached .js/.css for 4 h (no Cache-Control from the origin), so after the
+  deploy phones got new HTML with old scripts. Static files now send `Cache-Control: no-cache`
+  (revalidate by ETag every load). `?v=2` on main.js/style.css in index.html was a one-time bust for
+  the copies cached before that; no need to bump it on future deploys.
 
 ## Science ladder (real-mass ranges shown in the HUD, log-mapped within each level)
 | # | Level | Real mass | Fact-card examples |

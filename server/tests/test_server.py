@@ -28,6 +28,14 @@ def test_healthz(client):
     assert body["ok"] and body["objects"] >= C.TARGET_PLAYERS
 
 
+def test_static_files_must_be_revalidated(client):
+    # otherwise Cloudflare serves old scripts for hours after a deploy
+    for path in ("/", "/js/main.js", "/css/style.css", "/js/touch.js"):
+        r = client.get(path)
+        assert r.status_code == 200
+        assert r.headers["cache-control"] == "no-cache"
+
+
 def test_connect_join_and_receive_snapshots(client):
     with client.websocket_connect("/ws") as ws:
         hello = ws.receive_json()

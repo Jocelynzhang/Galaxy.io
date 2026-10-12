@@ -279,4 +279,15 @@ async def ws_endpoint(ws: WebSocket):
         game.leave(s)
 
 
-app.mount("/", StaticFiles(directory=CLIENT_DIR, html=True), name="client")
+class RevalidatedStaticFiles(StaticFiles):
+    """Static files with `Cache-Control: no-cache`, so browsers and Cloudflare check the ETag on every
+    load. Without it Cloudflare kept .js/.css for 4 hours after a deploy and served new HTML with old
+    scripts (found when the phone controls didn't appear on the live site)."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers.setdefault("Cache-Control", "no-cache")
+        return response
+
+
+app.mount("/", RevalidatedStaticFiles(directory=CLIENT_DIR, html=True), name="client")
