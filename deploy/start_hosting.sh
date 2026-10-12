@@ -184,6 +184,7 @@ EOF
   [[ -n "$(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null)" ]] ||
     warn "Turn on automatic login (System Settings → Users & Groups): both services only run while you are logged in."
   echo "Also once, in the Cloudflare dashboard: SSL/TLS → Edge Certificates → 'Always Use HTTPS' = on."
+  echo "And: Caching → Configuration → Browser Cache TTL = 'Respect Existing Headers' (else phones keep old scripts for 4 h after an update)."
   echo "Server log: ~/Library/Logs/universe-io/server.log"
 }
 

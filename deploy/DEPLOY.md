@@ -85,6 +85,9 @@ The random URL works from any phone or computer until you stop `cloudflared`.
    launchctl bootstrap gui/$(id -u) $P      # logs: ~/Library/Logs/com.cloudflare.cloudflared.err.log
    ```
 6. Optional, in the Cloudflare dashboard: SSL/TLS → Edge Certificates → *Always Use HTTPS* = on.
+7. In the Cloudflare dashboard: Caching → Configuration → *Browser Cache TTL* = **Respect Existing
+   Headers**. The server sends `Cache-Control: no-cache`, but Cloudflare's default (4 hours) overrides
+   it for browsers, so players would keep old scripts for hours after an update.
 
 ## 3. Day to day
 
