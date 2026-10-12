@@ -92,6 +92,8 @@ def think(world: World, me: Player, brain: Brain, now: float) -> None:
     r = me.radius
     sense = r * C.NPC_SENSE[0] + C.NPC_SENSE[1]
     flee_x = flee_y = 0.0
+    alarm = 0.0                      # how urgent the worst threat is (0 = none, 1 = touching)
+    threats: list[Player] = []
     prey: Player | None = None
     prey_d = math.inf
     for o in world.players.values():
@@ -101,20 +103,29 @@ def think(world: World, me: Player, brain: Brain, now: float) -> None:
         if d > sense:
             continue
         if can_eat(o.mass, me.mass):
-            # closer and bigger threats push harder
-            danger = max(0.0, 1.0 - (d - o.radius - r) / (sense * 0.6))
+            threats.append(o)
+            # danger grows as the gap closes; fast (or boosting) threats count from further away
+            gap = d - o.radius
+            reach = max(sense * 0.6, _top_speed(o) * C.NPC_FLEE_WARN_S)
+            danger = max(0.0, 1.0 - gap / reach)
             if danger > 0:
                 flee_x += (me.x - o.x) / max(d, 1) * danger
                 flee_y += (me.y - o.y) / max(d, 1) * danger
+                alarm = max(alarm, danger)
         elif can_eat(me.mass, o.mass) and d < prey_d and not world.shielded(o):
             prey, prey_d = o, d
 
     boost = False
     noise = C.NPC_AIM_NOISE[1]
-    if math.hypot(flee_x, flee_y) > 0.25:
-        angle = math.atan2(flee_y, flee_x)
-        boost = math.hypot(flee_x, flee_y) > 0.35 and rng.random() < C.NPC_FLEE_BOOST
-    elif prey is not None and _wants_chase(brain, prey, prey_d, r, now):
+    if alarm > C.NPC_FLEE_ALARM:
+        angle, worst_gap, closest = _flee_heading(me, threats)
+        noise = C.NPC_AIM_NOISE[0]
+        # boost once the nearest threat could reach us within NPC_FLEE_BOOST_S
+        boost = worst_gap < _top_speed(closest) * C.NPC_FLEE_BOOST_S and rng.random() < C.NPC_FLEE_BOOST
+        brain.next_think = now + rng.uniform(*C.NPC_FLEE_THINK_S)   # stay alert while in danger
+        world.set_input(me.id, angle + rng.uniform(-noise, noise), 1.0, boost)
+        return
+    if prey is not None and _wants_chase(brain, prey, prey_d, r, now):
         angle = _intercept(me, prey, prey_d)
         noise = C.NPC_AIM_NOISE[0]
         boost = (prey_d < r * 4 + 250 and me.mass > prey.mass * C.NPC_BOOST_RATIO
@@ -125,12 +136,48 @@ def think(world: World, me: Player, brain: Brain, now: float) -> None:
         if angle is None:
             brain.wander += rng.uniform(-0.6, 0.6)
             angle = brain.wander
+        if flee_x or flee_y:
+            # a threat is around but not close yet: graze away from it rather than toward it
+            angle = math.atan2(math.sin(angle) + flee_y * 4, math.cos(angle) + flee_x * 4)
         # the odd playful dash shows players what boosting looks like
         boost = me.mass > C.BOOST_MIN_MASS * 3 and rng.random() < 0.03
 
     angle = _avoid_walls(me, angle, r)
     angle += rng.uniform(-noise, noise)  # imperfect steering keeps NPCs beatable
     world.set_input(me.id, angle, 1.0, boost)
+
+
+def _top_speed(o: Player) -> float:
+    return speed_for(o.mass) * (C.BOOST_MULT if o.mass >= C.BOOST_MIN_MASS else 1.0)
+
+
+def _flee_heading(me: Player, threats: list[Player]) -> tuple[float, float, Player]:
+    """Try NPC_FLEE_DIRS headings; keep the one that leaves the biggest gap to the nearest threat
+    after NPC_FLEE_LOOKAHEAD s, assuming every threat chases us at its top speed. Walls are handled
+    by clamping our predicted position, so heading into a wall or corner scores badly.
+    Returns (heading, current gap to the nearest threat, that threat)."""
+    t = C.NPC_FLEE_LOOKAHEAD
+    step = _top_speed(me) * t        # we boost when it gets tight, so plan with boost speed
+    r = me.radius
+    closest = min(threats, key=lambda o: math.hypot(o.x - me.x, o.y - me.y) - o.radius)
+    now_gap = math.hypot(closest.x - me.x, closest.y - me.y) - closest.radius
+    best_a, best_score = 0.0, -math.inf
+    for k in range(C.NPC_FLEE_DIRS):
+        a = 2 * math.pi * k / C.NPC_FLEE_DIRS
+        px = min(C.WORLD_W - r, max(r, me.x + math.cos(a) * step))
+        py = min(C.WORLD_H - r, max(r, me.y + math.sin(a) * step))
+        score = math.inf
+        for o in threats:
+            # not capped at 0: "caught later" must still beat "caught sooner", or every heading
+            # ties and the wall-room term sends us back toward the chaser
+            d = math.hypot(px - o.x, py - o.y)
+            score = min(score, d - _top_speed(o) * t - o.radius)
+        # keep a little room from walls so the next escape still has options
+        wall = min(px, py, C.WORLD_W - px, C.WORLD_H - py) - r
+        score -= max(0.0, C.NPC_FLEE_WALL_ROOM - wall) * 0.5
+        if score > best_score:
+            best_a, best_score = a, score
+    return best_a, now_gap, closest
 
 
 def _wants_chase(brain: Brain, prey: Player, d: float, r: float, now: float) -> bool:

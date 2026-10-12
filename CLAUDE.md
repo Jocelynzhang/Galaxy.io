@@ -143,6 +143,25 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
   no longer black hole / galaxy within 15 min. A first, harsher setting (5 hunters) killed it every
   1–2 min and was pulled back. `python -m server.sim` now prints each pilot death and its killer.
 
+**2026-10-11** (feedback round 2: bots flee better, weaker gravity, phone controls)
+- Escape AI: an NPC in danger scores 24 headings by the gap left to the nearest threat after 1 s
+  (threats assumed to chase at top speed, own position clamped to the world, so corners score badly),
+  notices fast/boosting threats earlier, grazes away from nearby threats, reacts every 0.05–0.1 s and
+  boosts when a threat could reach it within 1.2 s. Bug found while tuning: capping the score at 0
+  made every heading tie and sent cornered NPCs back toward the chaser. Benchmark (smart human-like
+  chaser, 540 trials): caught 31 % → 11 %. Remaining catches are big NPCs pinned to a wall: above
+  ~1100 mass everything moves at `SPEED_MIN`, so cornering stays a real tactic.
+- Food gravity halved and reach 2.2 → 1.6 r: it was quadrupling food income at star level
+  (52 vs 13 %/min with gravity off); now ~32 %/min. Growth at the top should come from hunting.
+- Sim after both: pilot 1–2 deaths per 15 min, best life main-sequence/giant star; bots-only world
+  4 eats per 10 min. Pacing is now slow at the top for a bot-skill pilot; watch play-test feedback.
+- Touch controls (`client/js/touch.js`): floating joystick on the left half (appears under the thumb,
+  let go = stop), hold-to-boost button on the right (greyed out until 25 mass), multi-touch via
+  pointer events. Mouse input now uses pointer events filtered to `pointerType === 'mouse'`, because
+  Safari turns taps into fake mouse clicks. Small screens zoom out (`viewScale`, 1 at >= 720 px) so a
+  phone sees about the area a desktop does; compact HUD and touch wording on small screens.
+  Tested in WebKit with iPhone portrait + landscape profiles (`tools/playtest_phone.py`).
+
 ## Science ladder (real-mass ranges shown in the HUD, log-mapped within each level)
 | # | Level | Real mass | Fact-card examples |
 |---|---|---|---|
@@ -166,7 +185,8 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - [x] **M3 HUD + science:** leaderboard, progress bar, real-mass readout, fact cards, name filter
 - [x] **M4 Visuals:** lensing grid shader, boost particles, 12 animations, supernova
 - [x] **M5 Deploy:** Mac + Cloudflare Tunnel, safeguards, launchd service, internet play-test
-- Later: touch controls, sound, optional accounts or high scores, multiple rooms
+- [x] Touch controls (phone joystick + boost button)
+- Later: sound, optional accounts or high scores, multiple rooms
 
 ## Commands
 - Environment: `conda activate galaxyio` (Python 3.11), then `pip install -r requirements-dev.txt`
@@ -178,6 +198,8 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
 - Play-test in real Chrome via DevTools (types a name, steers, boosts, screenshots, reads the HUD):
   `python tools/playtest.py <out_dir> [seconds]` (server must be running on :8000)
 - Evaluate client JS in the page (no Node needed): `python tools/jseval.py "import('/js/realmass.js').then(m => m.formatRealMass(24.8))"`
+- Phone play-test (WebKit, iPhone profile; `pip install playwright && python -m playwright install webkit`):
+  `python tools/playtest_phone.py <out_dir> [base_url] ["iPhone 15 landscape"]`
 - WebSocket load test: `python tools/loadtest.py [bots] [seconds]` (snapshot rate + KB/s per client)
 - Object gallery: http://localhost:8000/dev/gallery.html · spectator view: http://localhost:8000/?watch=1
 - Headless screenshot (no browser extension needed):

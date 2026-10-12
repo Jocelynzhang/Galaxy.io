@@ -177,6 +177,23 @@ def test_npc_ai_flees_bigger_and_chases_smaller():
     assert math.sin(me.angle) > 0, "should head down toward the prey"
 
 
+def test_cornered_npc_slides_along_the_wall_and_boosts():
+    from server.game.npc import Brain, think
+    import random
+    w = empty_world()
+    me = w.add_player("npc", is_bot=True, mass=100)
+    threat = w.add_player("big", mass=200)
+    me.x, me.y = me.radius + 30, 2000                                    # back against the left wall
+    threat.x, threat.y = me.x + me.radius + threat.radius + 60, 2000      # closing in from the right
+    boosts = 0
+    for seed in range(10):
+        think(w, me, Brain(hunter=False, rng=random.Random(seed)), 0.0)
+        assert math.cos(me.angle) < 0.5, "must not run back toward the threat"
+        assert abs(math.sin(me.angle)) > 0.7, "should escape up or down along the wall"
+        boosts += me.boost
+    assert boosts >= 7          # boosting is a dice roll per decision (NPC_FLEE_BOOST)
+
+
 def test_simulation_smoke():
     from server.sim import run
     res = run(minutes=0.5, pilots=1, seed=0)

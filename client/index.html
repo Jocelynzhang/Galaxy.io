@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Universe IO</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -38,7 +39,8 @@
       <p class="tagline">Start as a speck of dust. Grow into a galaxy.</p>
       <input id="name" name="name" maxlength="16" placeholder="Your name" autocomplete="off" autofocus>
       <button type="submit">Confirm</button>
-      <p class="hint">Steer with your mouse · hold click to boost (costs mass)</p>
+      <p class="hint mouse-hint">Steer with your mouse · hold click to boost (costs mass)</p>
+      <p class="hint touch-hint">Drag on the left to steer · hold BOOST on the right (costs mass)</p>
       <p id="join-status" class="status"></p>
     </form>
   </section>
