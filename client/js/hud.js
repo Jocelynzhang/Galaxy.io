@@ -41,7 +41,9 @@ export class Hud {
     if (lvl !== this.level) {
       if (this.level === -1) {
         this.showToast(`You're a speck of ${LEVELS[0].name.toLowerCase()}!`,
-          `${LEVELS[0].facts[0]} Steer with your mouse, hold click to boost.`);
+          `${LEVELS[0].facts[0]} ` + (document.body.classList.contains('touch')
+            ? 'Drag on the left to steer. BOOST works once you are an asteroid.'
+            : 'Steer with your mouse, hold click to boost.'));
       } else if (lvl > this.level) {
         this.showToast(`You're now ${article(LEVELS[lvl].name)}!`, this.nextFact(lvl));
       }

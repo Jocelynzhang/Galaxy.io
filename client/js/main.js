@@ -2,6 +2,7 @@ import { Renderer } from './render.js';
 import { State } from './state.js';
 import { LEVELS, loadLadder, setStartMass } from './levels.js';
 import { Hud, randomFact } from './hud.js';
+import { initTouch, setBoostReady, setTouchVisible, touch } from './touch.js';
 
 await loadLadder();
 
@@ -29,8 +30,15 @@ function send(msg) {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
 }
 
+// Small screens zoom out so a phone sees about as much of the universe as a desktop
+// (otherwise phone players get eaten by things they can't see). 1 on screens >= 720 px.
+function viewScale() {
+  return Math.min(1, Math.min(window.innerWidth, window.innerHeight) / 720);
+}
+
 function viewSize() {
-  return { vw: window.innerWidth, vh: window.innerHeight };
+  const k = viewScale();
+  return { vw: Math.round(window.innerWidth / k), vh: Math.round(window.innerHeight / k) };
 }
 
 function connect() {
@@ -47,6 +55,7 @@ function connect() {
       ws = null;
       playing = false;
       hud.show(false);
+      setTouchVisible(false);
       deadEl.hidden = true;
       joinEl.hidden = false;
       statusEl.textContent = 'Disconnected from the server. Press Confirm to rejoin.';
@@ -77,6 +86,7 @@ async function onMessage(msg) {
       deadEl.hidden = true;
       joinButton.disabled = false;
       hud.show(true);
+      setTouchVisible(true);
       break;
     case 's':
       state.push(msg);
@@ -90,6 +100,7 @@ async function onMessage(msg) {
     case 'dead':
       playing = false;
       hud.show(false);
+      setTouchVisible(false);
       state.clearMotion();   // the camera switches to the leader
       $('dead-msg').textContent =
         `${msg.by} swallowed you at ${Math.round(msg.mass)} mass. ` +
@@ -124,15 +135,24 @@ $('again').addEventListener('click', () => {
 });
 
 // ---------- input ----------
+// Mouse via pointer events filtered to real mice: Safari turns screen taps into fake mouse
+// clicks, which would otherwise fire a boost on every tap.
 const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2, boost: false };
-window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
-window.addEventListener('mousedown', (e) => { if (e.button === 0) { mouse.boost = true; sendInput(); } });
-window.addEventListener('mouseup', (e) => { if (e.button === 0) { mouse.boost = false; sendInput(); } });
+let lastInput = 'mouse';
+const isMouse = (e) => e.pointerType === 'mouse';
+window.addEventListener('pointermove', (e) => { if (isMouse(e)) { mouse.x = e.clientX; mouse.y = e.clientY; lastInput = 'mouse'; } });
+window.addEventListener('pointerdown', (e) => { if (isMouse(e) && e.button === 0) { mouse.boost = true; lastInput = 'mouse'; sendInput(); } });
+window.addEventListener('pointerup', (e) => { if (isMouse(e) && e.button === 0) { mouse.boost = false; sendInput(); } });
 window.addEventListener('blur', () => { mouse.boost = false; });
 window.addEventListener('resize', () => send({ t: 'view', ...viewSize() }));
+initTouch(() => { lastInput = 'touch'; sendInput(); });
 
 function sendInput() {
   if (!playing) return;
+  if (lastInput === 'touch') {
+    send({ t: 'in', a: +touch.angle.toFixed(3), th: +touch.throttle.toFixed(2), b: touch.boost ? 1 : 0 });
+    return;
+  }
   const dx = mouse.x - window.innerWidth / 2;
   const dy = mouse.y - window.innerHeight / 2;
   const dist = Math.hypot(dx, dy);
@@ -156,8 +176,12 @@ function frame() {
   renderer.updateFood(dt);
   const view = state.sample(t);
   if (!view) return;
+  view.zoom *= viewScale();
   renderer.draw(view, dt);
-  if (playing && !view.spectating) hud.update(view.me);
+  if (playing && !view.spectating) {
+    hud.update(view.me);
+    setBoostReady(view.me.m >= 25);   // server: BOOST_MIN_MASS
+  }
 }
 requestAnimationFrame(frame);
 

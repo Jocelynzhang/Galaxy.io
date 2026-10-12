@@ -56,8 +56,10 @@ EJECTA_COLOR_BASE = 100      # food color = base + booster's level, so the clien
 
 # --- gravity on food (never on players) ---
 # food within GRAVITY_REACH * r drifts inward at GRAVITY[level] * (r / d)^2 units / s
-GRAVITY = [0, 0, 30, 40, 55, 60, 80, 90, 110, 160, 200, 140]
-GRAVITY_REACH = 2.2
+# 2026-10-11: halved and shorter reach (was [.., 30, 40, 55, 60, 80, 90, 110, 160, 200, 140], 2.2):
+# gravity was quadrupling food income at star level, so big objects grew without hunting
+GRAVITY = [0, 0, 15, 20, 28, 30, 40, 45, 55, 80, 100, 70]
+GRAVITY_REACH = 1.6
 GRAVITY_MAX_SPEED = 300.0
 
 # --- mass decay for big objects (stars shine away mass!) ---
@@ -84,7 +86,16 @@ NPC_GIVE_UP_S = 2.0          # rest after a chase times out, so players can esca
 NPC_SNACK_DIST = (3.0, 200.0)  # cautious NPCs start chases within k * radius + c   [2, 80]
 NPC_CHASE_BOOST = (0.8, 0.4)   # chance per think to boost at close prey, hunter / cautious   [0.6, 0.25]
 NPC_BOOST_RATIO = 1.35       # only boost-chase prey this much lighter (boosting costs mass)   [1.6]
-NPC_FLEE_BOOST = 0.9         # chance per think to boost away from a close threat   [0.7]
+NPC_FLEE_BOOST = 0.95        # chance per think to boost away from a close threat   [0.7]
+# running away (2026-10-11 round 2): score NPC_FLEE_DIRS headings by the gap they leave to the
+# nearest threat after NPC_FLEE_LOOKAHEAD s, so NPCs slide along walls instead of getting cornered
+NPC_FLEE_ALARM = 0.2         # danger level that switches an NPC into escape mode   [0.25]
+NPC_FLEE_WARN_S = 2.0        # a threat counts as dangerous within this many seconds of its top speed
+NPC_FLEE_BOOST_S = 1.2       # boost when the nearest threat could reach us within this many seconds
+NPC_FLEE_THINK_S = (0.05, 0.1)  # faster reactions while escaping
+NPC_FLEE_DIRS = 24
+NPC_FLEE_LOOKAHEAD = 1.0
+NPC_FLEE_WALL_ROOM = 250.0   # prefer escape routes that keep this much room from the walls
 NPC_LEAD_S = 0.8             # aim at where the prey will be, up to this many seconds ahead   [0]
 NPC_AIM_NOISE = (0.1, 0.25)    # steering error (radians) while chasing / otherwise   [0.25, 0.25]
 
