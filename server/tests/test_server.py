@@ -117,7 +117,35 @@ def test_game_loop_survives_a_crashing_tick(client, monkeypatch):
         return real_step(dt)
 
     monkeypatch.setattr(main.game.world, "step", flaky)
-    errors, tick = main.game.errors, main.game.world.tick
-    time.sleep(0.3)
-    assert main.game.errors == errors + 1
-    assert main.game.world.tick > tick, "the universe keeps ticking after an error"
+    with client.websocket_connect("/ws"):     # the universe only runs while someone is connected
+        errors, tick = main.game.errors, main.game.world.tick
+        time.sleep(0.3)
+        assert main.game.errors == errors + 1
+        assert main.game.world.tick > tick, "the universe keeps ticking after an error"
+
+
+def test_universe_idles_while_nobody_is_connected(client):
+    time.sleep(0.1)
+    assert client.get("/healthz").json()["idle"]
+    tick = main.game.world.tick
+    time.sleep(0.2)
+    assert main.game.world.tick == tick
+    with client.websocket_connect("/ws") as ws:
+        ws.receive_json()
+        time.sleep(0.2)
+        assert main.game.world.tick > tick
+
+
+def test_first_human_after_a_long_bots_only_stretch_gets_a_fresh_universe(client):
+    with client.websocket_connect("/ws") as ws:
+        ws.receive_json()
+        old_ids = set(main.game.world.players)
+        main.game.bot_only_s = C.ROOM_RESET_AFTER_S + 1
+        ws.send_json({"t": "join", "name": "Kid", "vw": 800, "vh": 600})
+        me = recv_until(ws, "welcome")["id"]
+        assert not old_ids & set(main.game.world.players)
+        assert me in main.game.world.players and main.game.bot_only_s < 1
+        # a human in the room: never reset under them
+        main.game.bot_only_s = 0
+        time.sleep(0.2)
+        assert main.game.bot_only_s == 0

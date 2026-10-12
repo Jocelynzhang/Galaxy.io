@@ -166,6 +166,21 @@ client/                   index.html, js/ (net, render, camera, lensing, hud, ob
   (revalidate by ETag every load). `?v=2` on main.js/style.css in index.html was a one-time bust for
   the copies cached before that; no need to bump it on future deploys.
 
+**2026-10-11** (bug: bots-only world freezes around food clumps; idle + fresh room)
+- Reproduced with an hour of bots-only simulation: food grew 4500 → 9000 and piled up along the walls and
+  in the corners while bots hovered next to the piles. Three causes: (1) boost exhaust was never capped
+  (natural food is topped up to `FOOD_TARGET`, exhaust just accumulated); (2) food clamped onto the
+  wall itself was uneatable, because a player's centre stops one radius from the wall (strict `< r`);
+  (3) NPC wall avoidance also applied while chasing, so a hunter never reached prey hiding in a corner
+  and both froze in a standoff. Fixes: `EJECTA_LIFE_S` 60 (uneaten exhaust fades), `FOOD_WALL_MARGIN`
+  20 (food always stays inside the walls), no wall avoidance while chasing, grazing wall margin
+  150 → 60 (`NPC_WALL_MARGIN`). After: food steady at ~4750 for an hour, every bot keeps moving.
+- Product owner's idea, implemented: the simulation pauses while nobody is connected, and a universe
+  that ran `ROOM_RESET_AFTER_S` (120 s) with no human in it is replaced by a fresh one when the next
+  human joins (or the next visitor opens the menu). Never resets with a human in the room.
+  `World.reset()` keeps id counters running so clients just see old ids removed. `/healthz` shows
+  `idle` and `bot_only_s`.
+
 ## Science ladder (real-mass ranges shown in the HUD, log-mapped within each level)
 | # | Level | Real mass | Fact-card examples |
 |---|---|---|---|

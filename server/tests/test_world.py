@@ -191,3 +191,50 @@ def test_spectator_snapshot_is_marked_and_follows_given_player():
     snap = w.snapshot_for(leader.id, 1280, 720, {}, spectating=True)
     assert snap["spec"] == 1 and snap["me"]["id"] == leader.id
     assert "spec" not in w.snapshot_for(leader.id, 1280, 720, {})
+
+
+def test_boost_exhaust_fades_so_it_cannot_pile_up():
+    # a long bots-only run grew from 4500 to 9000 pellets: natural food is topped up, exhaust was never capped
+    w = empty_world()
+    p = w.add_player("booster", mass=500)
+    w._eject(p, 5.0)
+    fid = max(w.food)
+    for _ in range(round(C.EJECTA_LIFE_S * C.TICK_HZ) - 2):
+        w.players.clear()       # nobody around to eat it
+        w.step(DT)
+        assert fid in w.food
+    w.step(DT)
+    w.step(DT)
+    assert fid not in w.food
+
+
+def test_food_never_rests_on_a_wall_where_nobody_can_reach_it():
+    w = empty_world()
+    p = w.add_player("booster", mass=200)
+    p.x, p.y, p.angle = C.WORLD_W - p.radius, p.radius, 3 * math.pi / 4   # top-right corner, facing out: exhaust shoots in
+    for _ in range(20):
+        w._eject(p, 2.0)
+    for _ in range(30):
+        w._move_food(DT)
+    assert w.food
+    for f in w.food.values():
+        assert C.FOOD_WALL_MARGIN <= f.x <= C.WORLD_W - C.FOOD_WALL_MARGIN
+        assert C.FOOD_WALL_MARGIN <= f.y <= C.WORLD_H - C.FOOD_WALL_MARGIN
+    # and a small player squeezed into that corner can actually eat it
+    eater = w.add_player("dust")
+    eater.x, eater.y = C.WORLD_W - eater.radius, eater.radius
+    corner = min(w.food.values(), key=lambda f: math.hypot(f.x - eater.x, f.y - eater.y))
+    assert (corner.x, corner.y) == (C.WORLD_W - C.FOOD_WALL_MARGIN, C.FOOD_WALL_MARGIN), "exhaust reached the corner"
+    corner.owner = 0
+    w._eat_food(eater)
+    assert corner.id not in w.food
+
+
+def test_reset_gives_a_fresh_universe_with_new_ids():
+    w = World(seed=3)
+    old = w.add_player("old")
+    old_food = set(w.food)
+    w.reset()
+    assert not w.players and len(w.food) == C.FOOD_TARGET == w.natural_food
+    assert not old_food & set(w.food), "clients may still hold the old food ids"
+    assert w.add_player("new").id > old.id

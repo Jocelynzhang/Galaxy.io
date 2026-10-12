@@ -236,3 +236,27 @@ def test_boosting_at_a_threshold_does_not_flicker(monkeypatch):
         levels.append(p.level)
     changes = sum(1 for a, b in zip(levels, levels[1:]) if a != b)
     assert changes <= 1 and levels[-1] == 5
+
+
+def test_hunter_goes_into_the_corner_after_hiding_prey():
+    # wall avoidance used to turn the hunter away, and both froze there for good
+    from server.game.npc import Brain, think
+    import random
+    w = empty_world()
+    prey = w.add_player("small", is_bot=True, mass=25)
+    prey.x, prey.y = C.WORLD_W - prey.radius, prey.radius
+    prey.shield_until = 0
+    me = w.add_player("npc", is_bot=True, mass=34)
+    me.x, me.y = prey.x - 150, prey.y + 160
+    for seed in range(5):
+        think(w, me, Brain(hunter=True, rng=random.Random(seed)), 0.0)
+        assert math.cos(me.angle) > 0.3 and math.sin(me.angle) < -0.3, "should head up-right into the corner"
+
+
+def test_npc_reset_refills_the_world():
+    w = World(seed=2)
+    npcs = NpcManager(w, seed=2)
+    w.reset()
+    npcs.reset()
+    assert len(w.players) == C.TARGET_PLAYERS == len(npcs.brains)
+    assert set(npcs.brains) == set(w.players)

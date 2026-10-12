@@ -17,6 +17,7 @@ FOOD_SPAWN_PER_TICK = 20     # max pellets respawned per tick
 FOOD_MASS = 1.0
 FOOD_RADIUS = 4.0
 FOOD_COLORS = 6              # number of palette entries the client knows about
+FOOD_WALL_MARGIN = 20.0      # food stays this far inside the walls (food on a wall was uneatable)
 
 # --- players ---
 START_MASS = 10.0
@@ -52,6 +53,7 @@ EJECTA_SPREAD = 0.26         # half-angle of the exhaust cone (radians, ~15 degr
 EJECTA_DRAG = 4.0            # velocity decay rate (1/s)
 EJECTA_ARM_S = 0.25          # others may eat a pellet after this many seconds
 EJECTA_OWNER_ARM_S = 1.2     # the booster itself may re-eat it after this many seconds
+EJECTA_LIFE_S = 60.0         # uneaten exhaust fades after this long (else it piles up forever)
 EJECTA_COLOR_BASE = 100      # food color = base + booster's level, so the client can tint it
 
 # --- gravity on food (never on players) ---
@@ -96,8 +98,14 @@ NPC_FLEE_THINK_S = (0.05, 0.1)  # faster reactions while escaping
 NPC_FLEE_DIRS = 24
 NPC_FLEE_LOOKAHEAD = 1.0
 NPC_FLEE_WALL_ROOM = 250.0   # prefer escape routes that keep this much room from the walls
+NPC_WALL_MARGIN = 60.0       # grazing NPCs turn back this far from a wall (beyond their radius)   [150]
 NPC_LEAD_S = 0.8             # aim at where the prey will be, up to this many seconds ahead   [0]
 NPC_AIM_NOISE = (0.1, 0.25)    # steering error (radians) while chasing / otherwise   [0.25, 0.25]
+
+# --- room lifecycle ---
+# The simulation pauses while nobody is connected. A universe that ran this many seconds with no
+# human in it is replaced by a fresh one when the next human joins (or the next visitor connects).
+ROOM_RESET_AFTER_S = 120.0
 
 # --- camera ---
 # on-screen radius = SCREEN_R0 * (r / r_start) ** ZOOM_EXP ; zoom = screen radius / world radius
