@@ -2,12 +2,20 @@
 import itertools
 import math
 import random
+from collections import deque
 from dataclasses import dataclass
 
 from . import config as C
 from .entities import Food, Player, radius_for
 from .levels import level_index, real_mass_kg, settle_level
 from .physics import can_eat, overlaps_to_eat, speed_for, zoom_for
+
+
+def _clamp_food(x: float, y: float) -> tuple[float, float]:
+    """Keep food FOOD_WALL_MARGIN inside the walls. A player's centre stops one radius from a wall,
+    so food lying on the wall itself (or in a corner) could never be eaten and piled up there."""
+    m = C.FOOD_WALL_MARGIN
+    return min(C.WORLD_W - m, max(m, x)), min(C.WORLD_H - m, max(m, y))
 
 
 class FoodGrid:
@@ -68,9 +76,23 @@ class World:
         self.natural_food = 0            # food count excluding boost ejecta
         self.flying: set[int] = set()    # food ids that still have velocity
         self.grid = FoodGrid()
+        self.ejecta_expiry: deque[tuple[int, int]] = deque()   # (tick it fades, food id), oldest first
         self.best_level: dict[int, int] = {}
         self._ids = itertools.count(1)
         self._food_ids = itertools.count(1)
+        for _ in range(C.FOOD_TARGET):
+            self._spawn_food()
+
+    def reset(self) -> None:
+        """Start a fresh universe: no players, freshly scattered food. Id counters keep running, so
+        clients holding old ids just see them removed in the next snapshot."""
+        self.players.clear()
+        self.best_level.clear()
+        self.food.clear()
+        self.natural_food = 0
+        self.flying.clear()
+        self.grid = FoodGrid()
+        self.ejecta_expiry.clear()
         for _ in range(C.FOOD_TARGET):
             self._spawn_food()
 
@@ -125,8 +147,8 @@ class World:
     def _spawn_food(self) -> None:
         self._add_food(Food(
             id=next(self._food_ids),
-            x=self.rng.uniform(0, C.WORLD_W),
-            y=self.rng.uniform(0, C.WORLD_H),
+            x=self.rng.uniform(C.FOOD_WALL_MARGIN, C.WORLD_W - C.FOOD_WALL_MARGIN),
+            y=self.rng.uniform(C.FOOD_WALL_MARGIN, C.WORLD_H - C.FOOD_WALL_MARGIN),
             color=self.rng.randrange(C.FOOD_COLORS),
             moved_tick=self.tick,
         ))
@@ -147,11 +169,11 @@ class World:
                  edible_tick=self.tick + round(C.EJECTA_ARM_S * C.TICK_HZ),
                  owner_edible_tick=self.tick + round(C.EJECTA_OWNER_ARM_S * C.TICK_HZ))
         dist = p.radius + f.radius + 2
-        f.x = min(C.WORLD_W, max(0.0, p.x + ca * dist))
-        f.y = min(C.WORLD_H, max(0.0, p.y + sa * dist))
+        f.x, f.y = _clamp_food(p.x + ca * dist, p.y + sa * dist)
         speed = C.EJECTA_SPEED * self.rng.uniform(0.8, 1.1)
         f.vx, f.vy = ca * speed, sa * speed
         self._add_food(f)
+        self.ejecta_expiry.append((self.tick + round(C.EJECTA_LIFE_S * C.TICK_HZ), f.id))
 
     # ---------- simulation ----------
     def step(self, dt: float) -> list[Death]:
@@ -160,6 +182,7 @@ class World:
             self._move(p, dt)
             self._decay(p, dt)
         self._move_food(dt)
+        self._expire_ejecta()
         for p in self.players.values():
             self._eat_food(p)
         deaths = self._eat_players()
@@ -228,11 +251,19 @@ class World:
                 moves[fid] = (fx + dx / d * step, fy + dy / d * step)
         for fid, (x, y) in moves.items():
             f = self.food[fid]
-            x = min(C.WORLD_W, max(0.0, x))
-            y = min(C.WORLD_H, max(0.0, y))
+            x, y = _clamp_food(x, y)
             if abs(x - f.x) > 0.01 or abs(y - f.y) > 0.01:
                 self.grid.move(f, x, y)
                 f.moved_tick = self.tick
+
+    def _expire_ejecta(self) -> None:
+        # Uneaten boost exhaust fades away. Natural food is topped up to FOOD_TARGET, but nothing
+        # capped exhaust, so a long bots-only run piled up thousands of extra pellets.
+        q = self.ejecta_expiry
+        while q and q[0][0] <= self.tick:
+            fid = q.popleft()[1]
+            if fid in self.food:
+                self._remove_food(fid)
 
     def _eat_food(self, p: Player) -> None:
         r = p.radius

@@ -41,7 +41,12 @@ class NpcManager:
         self.brains: dict[int, Brain] = {}
         self.time = 0.0
         self.spawn_at: float | None = None
-        # fill the world immediately at startup
+        self.reset()
+
+    def reset(self) -> None:
+        """Fill the world with fresh NPCs (at startup and after World.reset)."""
+        self.brains.clear()
+        self.spawn_at = None
         while self._total() < C.TARGET_PLAYERS:
             self._spawn()
 
@@ -126,6 +131,8 @@ def think(world: World, me: Player, brain: Brain, now: float) -> None:
         world.set_input(me.id, angle + rng.uniform(-noise, noise), 1.0, boost)
         return
     if prey is not None and _wants_chase(brain, prey, prey_d, r, now):
+        # no wall avoidance while chasing: it kept hunters from ever reaching prey that hid in a
+        # corner, and the two froze there in a standoff
         angle = _intercept(me, prey, prey_d)
         noise = C.NPC_AIM_NOISE[0]
         boost = (prey_d < r * 4 + 250 and me.mass > prey.mass * C.NPC_BOOST_RATIO
@@ -141,8 +148,8 @@ def think(world: World, me: Player, brain: Brain, now: float) -> None:
             angle = math.atan2(math.sin(angle) + flee_y * 4, math.cos(angle) + flee_x * 4)
         # the odd playful dash shows players what boosting looks like
         boost = me.mass > C.BOOST_MIN_MASS * 3 and rng.random() < 0.03
+        angle = _avoid_walls(me, angle, r)
 
-    angle = _avoid_walls(me, angle, r)
     angle += rng.uniform(-noise, noise)  # imperfect steering keeps NPCs beatable
     world.set_input(me.id, angle, 1.0, boost)
 
@@ -220,7 +227,7 @@ def _food_heading(world: World, me: Player, sense: float) -> float | None:
 
 
 def _avoid_walls(me: Player, angle: float, r: float) -> float:
-    margin = r + 150
+    margin = r + C.NPC_WALL_MARGIN
     vx, vy = math.cos(angle), math.sin(angle)
     if me.x < margin:
         vx += 1.5

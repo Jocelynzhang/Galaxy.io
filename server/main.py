@@ -118,6 +118,21 @@ class Game:
         self.by_player: dict[int, Session] = {}
         self.tick_ms = 0.0               # smoothed cost of one simulation tick
         self.errors = 0
+        self.bot_only_s = 0.0            # seconds simulated without any human since the last reset
+
+    @property
+    def idle(self) -> bool:
+        # nobody connected (not even a menu spectator): stop simulating
+        return not self.sessions
+
+    def reset_if_stale(self) -> None:
+        """A universe left to the bots for a long time drifts into odd states, so the first human
+        (or menu visitor) after ROOM_RESET_AFTER_S bots-only seconds gets a fresh one."""
+        if self.humans() == 0 and self.bot_only_s >= C.ROOM_RESET_AFTER_S:
+            log.info("fresh universe after %.0f s without humans", self.bot_only_s)
+            self.world.reset()
+            self.npcs.reset()
+            self.bot_only_s = 0.0
 
     def humans(self) -> int:
         return len(self.by_player)
@@ -134,6 +149,7 @@ class Game:
             s.send({"t": "full"})
             return
         s.set_view(msg)
+        self.reset_if_stale()
         p = self.world.add_player(clean_name(msg.get("name")))
         s.player_id = p.id
         s.spectating = False
@@ -178,6 +194,9 @@ class Game:
             await asyncio.sleep(max(0.0, delay))
 
     def tick(self, dt: float) -> None:
+        if self.idle:
+            return
+        self.bot_only_s = 0.0 if self.humans() else self.bot_only_s + dt
         self.npcs.update(dt)
         for d in self.world.step(dt):
             s = self.by_player.pop(d.victim_id, None)
@@ -220,7 +239,8 @@ app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None
 @app.get("/healthz")
 async def healthz():
     return {"ok": True, "tick": game.world.tick, "tick_ms": round(game.tick_ms, 2), "errors": game.errors,
-            "connections": len(game.sessions), "humans": game.humans(), "objects": len(game.world.players)}
+            "connections": len(game.sessions), "humans": game.humans(), "objects": len(game.world.players),
+            "idle": game.idle, "bot_only_s": round(game.bot_only_s)}
 
 
 def client_ip(ws: WebSocket) -> str:
@@ -252,6 +272,8 @@ async def ws_endpoint(ws: WebSocket):
         return
     await ws.accept()
     s = Session(ws, ip)
+    if game.idle:
+        game.reset_if_stale()     # the menu behind a first visitor shows a fresh universe
     game.sessions.add(s)
     writer = asyncio.create_task(s.writer())
     s.send({"t": "hello", "world": [C.WORLD_W, C.WORLD_H], "foodR": C.FOOD_RADIUS, "startMass": C.START_MASS})
